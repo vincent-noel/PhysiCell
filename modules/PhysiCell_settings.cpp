@@ -216,7 +216,7 @@ Parameter<T>::Parameter()
 	pT = new T; 
 	value = *pT; 
 */
-	value = 1-1; 
+	 value = (T) 0;
 	return; 
 }
 
@@ -230,7 +230,7 @@ Parameter<T>::Parameter( std::string my_name )
 	pT = new T; 
 	value = *pT; 
 */
-	value = 1-1; 
+	 value = (T) 0;
 	return; 
 }
 

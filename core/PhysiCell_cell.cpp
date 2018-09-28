@@ -361,6 +361,24 @@ void Cell::start_death( int death_model_index )
 	return; 
 }
 
+
+void Cell::differentiate(Cell* parentCell, Cell* daughterCell)
+{
+	if(phenotype.differentiation.outcomes.size() == 0)
+	{
+		return ;
+	}
+	
+	int event = choose_event(phenotype.differentiation.probabilities);
+	Differentiation_Outcome outcome = phenotype.differentiation.outcomes[event];
+	
+	Cell_Definition* first = outcome.first_type;
+	Cell_Definition* second = outcome.second_type;
+	
+	parentCell->convert_to_cell_definition(*first);
+	daughterCell->convert_to_cell_definition(*second);	
+}
+
 void Cell::assign_orientation()
 {
 	state.orientation.resize(3,0.0);
@@ -391,6 +409,10 @@ Cell* Cell::divide( )
 	child->copy_data( this );	
 	child->copy_function_pointers(this);
 	child->parameters = parameters;
+	if(phenotype.differentiation.differentiation_possible)
+	{
+		differentiate(this, child);
+	}
 	
 	// The following is already performed by create_cell(). JULY 2017 ***
 	// child->register_microenvironment( get_microenvironment() );
