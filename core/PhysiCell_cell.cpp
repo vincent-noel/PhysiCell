@@ -375,8 +375,8 @@ void Cell::differentiate(Cell* parentCell, Cell* daughterCell)
 	Cell_Definition* first = outcome.first_type;
 	Cell_Definition* second = outcome.second_type;
 	
-	parentCell->convert_to_cell_definition(*first);
-	daughterCell->convert_to_cell_definition(*second);	
+	parentCell->convert_to_cell_definition_preserving_volume(*first);
+	daughterCell->convert_to_cell_definition_preserving_volume(*second);	
 }
 
 void Cell::assign_orientation()
