@@ -845,7 +845,16 @@ void Cell::convert_to_cell_definition( Cell_Definition& cd )
 	
 	return; 
 }
-
+	
+void convert_to_cell_definition_preserving_volume( Cell_Definition& cd )
+{
+	Volume vol = phenotype.volume; 
+	convert_to_cell_definition( cd ); 
+	phenotype.volume = vol; 
+	
+	return; 
+}	
+	
 void delete_cell( int index )
 {
 	// deregister agent in from the agent container
