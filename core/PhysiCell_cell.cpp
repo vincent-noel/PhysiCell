@@ -375,8 +375,15 @@ void Cell::differentiate(Cell* parentCell, Cell* daughterCell)
 	Cell_Definition* first = outcome.first_type;
 	Cell_Definition* second = outcome.second_type;
 	
-	parentCell->convert_to_cell_definition_preserving_volume(*first);
-	daughterCell->convert_to_cell_definition_preserving_volume(*second);	
+	double rand_number = UniformRandom(); 
+	if(rand_number > 0.5)
+	{
+		parentCell->convert_to_cell_definition_preserving_volume(*first);
+		daughterCell->convert_to_cell_definition_preserving_volume(*second);
+	} else {
+		parentCell->convert_to_cell_definition_preserving_volume(*second);
+		daughterCell->convert_to_cell_definition_preserving_volume(*first);
+	}	
 }
 
 void Cell::assign_orientation()
@@ -409,10 +416,6 @@ Cell* Cell::divide( )
 	child->copy_data( this );	
 	child->copy_function_pointers(this);
 	child->parameters = parameters;
-	if(phenotype.differentiation.differentiation_possible)
-	{
-		differentiate(this, child);
-	}
 	
 	// The following is already performed by create_cell(). JULY 2017 ***
 	// child->register_microenvironment( get_microenvironment() );
@@ -456,6 +459,11 @@ Cell* Cell::divide( )
 	
 	// child->set_phenotype( phenotype ); 
 	child->phenotype = phenotype; 
+	
+	if(phenotype.differentiation.differentiation_possible)
+	{
+		differentiate(this, child);
+	}
 	
 	return child;
 }
@@ -846,7 +854,7 @@ void Cell::convert_to_cell_definition( Cell_Definition& cd )
 	return; 
 }
 	
-void convert_to_cell_definition_preserving_volume( Cell_Definition& cd )
+void Cell::convert_to_cell_definition_preserving_volume( Cell_Definition& cd )
 {
 	Volume vol = phenotype.volume; 
 	convert_to_cell_definition( cd ); 
