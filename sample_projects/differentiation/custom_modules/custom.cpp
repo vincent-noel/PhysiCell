@@ -88,6 +88,15 @@ void create_cell_types( void )
 	initialize_default_cell_definition();
 	cell_defaults.phenotype.secretion.sync_to_microenvironment( &microenvironment ); 
 	
+	// Force 2D sim BEFORE using cell_defaults to define our custom cell types
+	cell_defaults.functions.set_orientation = up_orientation; 
+	cell_defaults.phenotype.geometry.polarity = 1.0;
+	cell_defaults.phenotype.motility.restrict_to_2D = true; 
+	
+	// make sure the defaults are self-consistent. 
+	cell_defaults.phenotype.secretion.sync_to_microenvironment( &microenvironment );
+	cell_defaults.phenotype.sync_to_functions( cell_defaults.functions );
+	
 	// Name the default cell type 
 	
 	stem_cell = cell_defaults;
