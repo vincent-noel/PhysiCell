@@ -101,36 +101,35 @@ void create_cell_types( void )
 	
 	stem_cell = cell_defaults;
 	stem_cell.type = 0;
+	stem_cell.phenotype.motility.migration_speed = 0.75;
+	stem_cell.parameters.o2_proliferation_threshold = 30;
 	
 	tumor_cell_a = cell_defaults;
 	tumor_cell_a.type = 1;
-	
-	tumor_cell_b = cell_defaults;
-	tumor_cell_b.type = 2;
+	tumor_cell_a.phenotype.motility.migration_speed = 1.5;
 	
 	
 	stem_cell.phenotype.differentiation.differentiation_possible = true;
 	
+	double p = MAX_DIFFERENTIATION;
+	double q = 1 - p;
+	
 	std::vector<double> probabilities;
-	probabilities.push_back(0.4);
-	probabilities.push_back(0.2);
-	probabilities.push_back(0.2);
-	probabilities.push_back(0.1);
-	probabilities.push_back(0.1);
+	probabilities.push_back(p*p);
+	probabilities.push_back(2*p*q);
+	probabilities.push_back(q*q);
 	stem_cell.phenotype.differentiation.probabilities = probabilities;
 	
 	std::vector<Differentiation_Outcome> outcomes;
-	Differentiation_Outcome* symmetric_stem = new Differentiation_Outcome(&stem_cell, &stem_cell);
-	Differentiation_Outcome* asymmetric_a = new Differentiation_Outcome(&stem_cell, &tumor_cell_a);
-	Differentiation_Outcome* asymmetric_b = new Differentiation_Outcome(&stem_cell, &tumor_cell_b);
 	Differentiation_Outcome* symmetric_a = new Differentiation_Outcome(&tumor_cell_a, &tumor_cell_a);
-	Differentiation_Outcome* symmetric_b = new Differentiation_Outcome(&tumor_cell_b, &tumor_cell_b);
-	outcomes.push_back(*symmetric_stem);
-	outcomes.push_back(*asymmetric_a);
-	outcomes.push_back(*asymmetric_b);
+	Differentiation_Outcome* asymmetric_a = new Differentiation_Outcome(&stem_cell, &tumor_cell_a);
+	Differentiation_Outcome* symmetric_stem = new Differentiation_Outcome(&stem_cell, &stem_cell);
 	outcomes.push_back(*symmetric_a);
-	outcomes.push_back(*symmetric_b);
+	outcomes.push_back(*asymmetric_a);
+	outcomes.push_back(*symmetric_stem);
 	stem_cell.phenotype.differentiation.outcomes = outcomes;
+	
+	stem_cell.functions.update_phenotype = update_differentiation_O2_based;
 	
 	
 	
@@ -179,19 +178,23 @@ void setup_tissue( void )
 	double cell_radius = cell_defaults.phenotype.geometry.radius; 
 	double cell_spacing = 0.95 * 2.0 * cell_radius; 
 	
-	double tumor_radius = 60; 
+	double tumor_radius = 100; 
 	
-	
-	
+	int z = 0;
 	for(int i = -tumor_radius; i < tumor_radius; i+=cell_spacing)
 	{
 		for(int j = -tumor_radius; j < tumor_radius; j+=15){
 			if(pow(i,2) + pow(j,2) <=  pow(tumor_radius,2))
 			{
 				Cell* bC;
-				bC = create_cell( stem_cell );
+				if(z % 10 == 0){
+					bC = create_cell( stem_cell );
+				}else{
+					bC = create_cell( tumor_cell_a );
+				}
 				bC->assign_position( j+25, i, 0.0 );
 			}
+			z++;
 		}
 	}
 	
@@ -201,19 +204,64 @@ void setup_tissue( void )
 std::vector<std::string> my_coloring_function( Cell* pCell )
 {
 	std::vector<std::string> output = false_cell_coloring_cytometry(pCell); 
-		
+	
 	if(pCell->type == 0 )
 	{
-		 output[0] = "green"; 
+		 output[0] = "white";
 		 output[2] = "green"; 
 	} else if(pCell->type == 1 ){
-		 output[0] = "red"; 
+		 output[0] = "white";
 		 output[2] = "red"; 
-	} else if(pCell->type == 2 ){
-		 output[0] = "blue"; 
-		 output[2] = "blue"; 
+	}
+	
+	static int O2_index = microenvironment.find_density_index( "oxygen" );
+	double o2 = pCell->nearest_density_vector()[O2_index];
+	
+	
+	//border goes from blue -> purple -> red as cell gets more hypoxic
+	if( o2 < pCell->parameters.o2_hypoxic_threshold )
+	{
+		int range = pCell->parameters.o2_hypoxic_threshold  - pCell->parameters.o2_hypoxic_saturation;
+		double ratio = (o2 - pCell->parameters.o2_hypoxic_saturation)/ range;
+		int color = ratio * 255;
+		char szTempString [128];		
+		sprintf( szTempString , "rgb(%u,%u,%u)", color, color, color); 
+		output[0].assign( szTempString );
 	}
 	
 	return output; 
+	 
 }
 
+
+void update_differentiation_O2_based(Cell* pCell, Phenotype& phenotype, double dt)
+{
+	
+	static int oxygen_substrate_index = pCell->get_microenvironment()->find_density_index("oxygen");
+	double o2 = pCell->nearest_density_vector()[oxygen_substrate_index];
+	
+	
+	if( o2 < pCell->parameters.o2_hypoxic_saturation)
+	{ 
+		return; 
+	}
+	
+	int range = pCell->parameters.o2_hypoxic_threshold  - pCell->parameters.o2_hypoxic_saturation;
+	double ratio = (o2 - pCell->parameters.o2_hypoxic_saturation)/ range;
+	
+	//prevent outlier oxygen values from creating abnormally high probabilities
+	if(ratio > 1)
+	{
+		ratio = 1;
+	}
+	
+	double p = MAX_DIFFERENTIATION * ratio;
+	double q = 1 - p;
+	
+	std::vector<double> updated_probabilities;
+	updated_probabilities.push_back(p*p);
+	updated_probabilities.push_back(2*p*q);
+	updated_probabilities.push_back(q*q);
+	
+	pCell->phenotype.differentiation.probabilities = updated_probabilities;
+}
