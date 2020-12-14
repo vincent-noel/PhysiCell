@@ -1074,7 +1074,7 @@ Phenotype::~Phenotype()
 		delete intracellular;
 }
 
-void Phenotype::operator=(const Phenotype &p ) { 
+Phenotype& Phenotype::operator=(const Phenotype &p ) { 
 		
 	flagged_for_division = p.flagged_for_division;
 	flagged_for_removal = p.flagged_for_removal;
@@ -1096,6 +1096,7 @@ void Phenotype::operator=(const Phenotype &p ) {
 	else
 		intracellular = NULL;
 	
+	return *this;
 }
 
 /*
