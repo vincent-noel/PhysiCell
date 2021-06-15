@@ -32,11 +32,11 @@ else
 	ifeq ($(UNAME_S),Linux)
 		OSFLAG += -D LINUX
 		OMP_LIB :=
-		LIBRR_DIR := $(shell pwd)/intracellular_libs/roadrunner
+		LIBRR_DIR := ./addons/libRoadrunner/roadrunner
 		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
 		LIBRR_LIBS := ${LIBRR_DIR}/lib
 		# CFLAGS := -march=$(ARCH) -g  -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D LIBROADRUNNER 
-		CFLAGS := -march=$(ARCH) -fomit-frame-pointer -m64 -std=c++11 -D ADDON_ROADRUNNER 
+		CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D ADDON_ROADRUNNER 
 	endif
 	ifeq ($(UNAME_S),Darwin)
 		OSFLAG += -D OSX
