@@ -1603,7 +1603,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	// set up the cell cycle 
 	// make sure the standard cycle models are defined 
 	create_standard_cycle_and_death_models();
-
+	
 	node = node.child( "cycle" ); 
 	if( node )
 	{

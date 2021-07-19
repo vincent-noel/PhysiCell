@@ -167,6 +167,17 @@ physiboss-cell-lines:
 	cp -r ./sample_projects/physiboss_cell_lines/config/* ./config/
 	mkdir ./scripts/
 	cp ./sample_projects/physiboss_cell_lines/scripts/* ./scripts/
+	
+invasion-model: 	
+	cp -r ./sample_projects/Invasion_model/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects/Invasion_model/main_invasion_model.cpp ./main.cpp 
+	cp Makefile Makefile-backup
+	cp ./sample_projects/Invasion_model/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
+	cp -r ./sample_projects/Invasion_model/config/* ./config/
+	mkdir ./scripts/
+	cp -r ./sample_projects/Invasion_model/scripts/* ./scripts/
 
 # early examples for convergence testing 
 

@@ -54,11 +54,11 @@ class MaBoSSIntracellular : public PhysiCell::Intracellular {
 	
 	void update() {
 		this->maboss.run_simulation();
-		this->next_physiboss_run += this->maboss.get_time_to_update();
+		this->next_physiboss_run += this->maboss.get_time_to_update() * (1 + 0.5*PhysiCell::UniformRandom());
 	}
 	
 	bool need_update() {
-		return PhysiCell::PhysiCell_globals.current_time >= this->next_physiboss_run;
+		return PhysiCell::PhysiCell_globals.current_time >= this->next_physiboss_run * (1 + 0.5*PhysiCell::UniformRandom());
 	}
 	
 	bool has_variable(std::string name) {
