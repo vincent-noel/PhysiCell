@@ -190,6 +190,17 @@ cancer-metabolism-sample:
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
 	cp ./sample_projects_intracellular/fba/cancer_metabolism/config/* ./config/
 
+invasion-model: 	
+	cp -r ./sample_projects_intracellular/boolean/Invasion_model/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_intracellular/boolean/Invasion_model/main_invasion_model.cpp ./main.cpp 
+	cp Makefile Makefile-backup
+	cp ./sample_projects_intracellular/boolean/Invasion_model/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
+	cp -r ./sample_projects_intracellular/boolean/Invasion_model/config/* ./config/
+	mkdir ./scripts/
+	cp -r ./sample_projects_intracellular/boolean/Invasion_model/scripts/* ./scripts/
+
 # early examples for convergence testing 
 
 physicell_test_mech1: $(PhysiCell_OBJECTS) ./examples/PhysiCell_test_mechanics_1.cpp 
