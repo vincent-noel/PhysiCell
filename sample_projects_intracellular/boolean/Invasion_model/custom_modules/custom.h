@@ -104,8 +104,9 @@ void tumor_cell_phenotype_with_signaling( Cell* pCell, Phenotype& phenotype, dou
 void set_input_nodes(Cell* pCell); 
 void from_nodes_to_cell(Cell* pCell, Phenotype& phenotype, double dt);
 std::vector<init_record> read_init_file(std::string filename, char delimiter, bool header);
-void build_ecm_shape();
+void set_substrate_density(int density_index, double concentration, double radius);
 std::vector<std::vector<double>> create_cell_sphere_positions(double cell_radius, double sphere_radius);
+std::vector<std::vector<double>> create_cell_disc_positions(double cell_radius, double disc_radius);
 /** \brief Go to proliferative phase if proliferation ON and in G0 phase */
 void do_proliferation(Cell* pCell, Phenotype& phenotype, double dt);
 bool wait_for_cell_growth(Cell* pCell, Phenotype& phenotype, double dt);

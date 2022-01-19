@@ -141,7 +141,7 @@ void create_cell_types( void )
 	cell_defaults.custom_data.add_variable("TGFbeta", "dimensionless", 0.0); //for paraview visualization
 	cell_defaults.custom_data.add_variable("node", "dimensionless", 0.0 ); //for paraview visualization
 	cell_defaults.custom_data.add_variable("adh", "dimensionless", 0.0 ); //for paraview visualization
- */	build_ecm_shape();
+ */
 
 	//Setting the custom_create_cell pointer to our create_custom_cell
 	// cell_defaults.functions.custom_cell_rule = Custom_cell::check_passive;
@@ -159,11 +159,11 @@ void create_cell_types( void )
 void setup_microenvironment( void )
 {
 	// make sure to override and go back to 2D 
-	if( default_microenvironment_options.simulate_2D == true )
-	{
-		std::cout << "Warning: overriding XML config option and setting to 3D!" << std::endl; 
-		default_microenvironment_options.simulate_2D = false; 
-	}	
+	// if( default_microenvironment_options.simulate_2D == true )
+	// {
+	// 	std::cout << "Warning: overriding XML config option and setting to 3D!" << std::endl; 
+	// 	default_microenvironment_options.simulate_2D = false; 
+	// }	
 
 	// initialize BioFVM 
 	initialize_microenvironment(); 	
@@ -176,38 +176,41 @@ void setup_microenvironment( void )
 
 void setup_tissue( void )
 {
-	Cell* pC;
 	//std::vector<init_record> cells = read_init_file(parameters.strings("init_cells_filename"), ';', true);
 	double cell_radius = cell_defaults.phenotype.geometry.radius; 
 	double cell_spacing = 0.95 * 2.0 * cell_radius; 
 	
 	double tumor_radius = parameters.doubles("config_radius");
-	std::vector<std::vector<double>> positions = create_cell_sphere_positions(cell_radius,tumor_radius);
+
+	std::vector<std::vector<double>> positions;
+
+	if (default_microenvironment_options.simulate_2D == true){
+		positions = create_cell_disc_positions(cell_radius,tumor_radius);
+		std::cout << "ENABLED 2D SIMULATION"; 
+	}
+	else
+		positions = create_cell_sphere_positions(cell_radius,tumor_radius);
+
+	Cell* pCell = NULL;
 
 	for (int i = 0; i < positions.size(); i++)
 	{
-		/*
-		float x = cells[i].x;
-		float y = cells[i].y;
-		float z = cells[i].z;
-		float radius = cells[i].radius;
-		int phase = cells[i].phase;
-		double elapsed_time = cells[i].elapsed_time;
-*/
-		pC = create_cell(); 
-		pC->assign_position( positions[i] );
-		double volume = sphere_volume_from_radius(cell_radius);
-		pC->set_total_volume(volume);
-		pC->phenotype.volume.target_solid_nuclear = cell_defaults.phenotype.volume.target_solid_nuclear;
-		pC->phenotype.volume.target_solid_cytoplasmic = cell_defaults.phenotype.volume.target_solid_cytoplasmic;
-		pC->phenotype.volume.rupture_volume = cell_defaults.phenotype.volume.rupture_volume; 
+
+		pCell = create_cell(get_cell_definition("default")); 
+		pCell->assign_position( positions[i] );
+
+		// double volume = sphere_volume_from_radius(cell_radius);
+		// pCell->set_total_volume(volume);
+		// pCell->phenotype.volume.target_solid_nuclear = cell_defaults.phenotype.volume.target_solid_nuclear;
+		// pCell->phenotype.volume.target_solid_cytoplasmic = cell_defaults.phenotype.volume.target_solid_cytoplasmic;
+		// pCell->phenotype.volume.rupture_volume = cell_defaults.phenotype.volume.rupture_volume; 
 	
 		//pC->phenotype.cycle.data.current_phase_index = phase+1;
 		//pC->phenotype.cycle.data.elapsed_time_in_phase = elapsed_time;
 		//if ((phase+1) == 1)
 			//pC->phenotype.cycle.pCycle_Model->phases[1].entry_function(pC, pC->phenotype, 0);
 
-		color_node(pC);
+		color_node(pCell);
 		//std::cout << pC->phenotype.intracellular->get_boolean_node_value("Cell_growth");
 		//pC->phenotype.intracellular->print_current_nodes();
 		//std::cout << std::endl;
@@ -313,7 +316,7 @@ void tumor_cell_phenotype_with_signaling( Cell* pCell, Phenotype& phenotype, dou
 
 	if (pCell->phenotype.intracellular->need_update())
 	{
-		
+		//  std::cout << "setting input nodes" << "\n";
 		//pCell->phenotype.intracellular->print_current_nodes();
 		set_input_nodes(pCell);
 		//std::cout << std::endl;
@@ -425,12 +428,7 @@ void from_nodes_to_cell(Cell* pCell, Phenotype& phenotype, double dt)
 	if ( pCell->phenotype.intracellular->has_variable("ECM_degrad") ){
 	 	set_mmp(pCell, pCell->phenotype.intracellular->get_boolean_variable_value("ECM_degrad") );}
 
-/*
-	if ( pCell->phenotype.intracellular->has_node("EMTreg") )
-	{
-		pCell->set_mmp( pCell->phenotype.intracellular->get_boolean_node_value("EMTreg") );
-	}
-*/
+
 	freezing(pCell, 0 );
 	/*
 	if ( pCell->phenotype.intracellular->get_boolean_variable_value( "CellCycleArrest" ) ){
@@ -795,27 +793,22 @@ void custom_update_velocity( Cell* pCell, Phenotype& phenotype, double dt)
 	return; 
 }
 
-void build_ecm_shape() {
- 
- // Here we design a spherical shell of ecm
- std::vector<double> center(3, 0);
- double inner_radius = parameters.doubles("config_radius");
- //double outer_radius = 150;
- double tgfb_radius = parameters.doubles("tgfbeta_radius");
- for (auto voxel : microenvironment.mesh.voxels) {
-	 //std::cout << voxel.center;
- // Compute norm to center
- double t_norm = norm(voxel.center);
- // If norm is in [inner_radius, outer_radius], then we add it
- if(t_norm > tgfb_radius && t_norm < inner_radius){
- microenvironment.density_vector(voxel.mesh_index)[microenvironment.find_density_index("TGFbeta")] = 0.3;
- }
- if (t_norm >= inner_radius ) {
- microenvironment.density_vector(voxel.mesh_index)[microenvironment.find_density_index("ecm")] = 0.3; 
- microenvironment.density_vector(voxel.mesh_index)[microenvironment.find_density_index("TGFbeta")] = 0.3;
- }
- }
- 
+
+void set_substrate_density(int density_index, double concentration, double radius)
+{
+	std::cout << "SETTING SUBSTRATE \n";
+	// Inject given concentration on the extremities only
+
+	std::cout << microenvironment.number_of_voxels() << "\n";
+	#pragma omp parallel for
+	for (int n = 0; n < microenvironment.number_of_voxels(); n++)
+	{
+		auto current_voxel = microenvironment.voxels(n);
+		double t_norm = norm(current_voxel.center);
+
+		if ((radius - t_norm) <= 0)
+			microenvironment.density_vector(n)[density_index] = concentration;
+	}
 }
 
 /* Return if cell has enough contact with other cells (compared to given threshold determined by the given level) */	
@@ -910,6 +903,52 @@ std::vector<std::vector<double>> create_cell_sphere_positions(double cell_radius
 	}
 	return cells;
 	
+}
+
+std::vector<std::vector<double>> create_cell_disc_positions(double cell_radius, double disc_radius)
+{	 
+	double cell_spacing = 0.95 * 2.0 * cell_radius; 
+	
+	double x = 0.0; 
+	double y = 0.0; 
+	double x_outer = 0.0;
+
+	std::vector<std::vector<double>> positions;
+	std::vector<double> tempPoint(3,0.0);
+	
+	int n = 0; 
+	while( y < disc_radius )
+	{
+		x = 0.0; 
+		if( n % 2 == 1 )
+		{ x = 0.5 * cell_spacing; }
+		x_outer = sqrt( disc_radius*disc_radius - y*y ); 
+		
+		while( x < x_outer )
+		{
+			tempPoint[0]= x; tempPoint[1]= y;	tempPoint[2]= 0.0;
+			positions.push_back(tempPoint);			
+			if( fabs( y ) > 0.01 )
+			{
+				tempPoint[0]= x; tempPoint[1]= -y;	tempPoint[2]= 0.0;
+				positions.push_back(tempPoint);
+			}
+			if( fabs( x ) > 0.01 )
+			{ 
+				tempPoint[0]= -x; tempPoint[1]= y;	tempPoint[2]= 0.0;
+				positions.push_back(tempPoint);
+				if( fabs( y ) > 0.01 )
+				{
+					tempPoint[0]= -x; tempPoint[1]= -y;	tempPoint[2]= 0.0;
+					positions.push_back(tempPoint);
+				}
+			}
+			x += cell_spacing; 
+		}		
+		y += cell_spacing * sqrt(3.0)/2.0; 
+		n++; 
+	}
+	return positions;
 }
 
 bool wait_for_cell_growth(Cell* pCell, Phenotype& phenotype, double dt){

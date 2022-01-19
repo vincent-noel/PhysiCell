@@ -111,6 +111,19 @@ int main( int argc, char* argv[] )
 	
 	/* PhysiCell setup */ 
  	
+	double radius_ECM = parameters.doubles("config_radius");
+	double radius_tgfbeta = parameters.doubles("tgfbeta_radius");
+
+	double density_ECM = parameters.doubles("density_ECM");
+	double density_tgfbeta = parameters.doubles("density_tgfbeta");
+
+	int ecm_index = microenvironment.find_density_index("ecm");
+	int tgfbeta_index = microenvironment.find_density_index("TGFbeta");
+
+
+	set_substrate_density(ecm_index, density_ECM, radius_ECM);
+	set_substrate_density(tgfbeta_index, density_tgfbeta, radius_tgfbeta);
+
 	// set mechanics voxel size, and match the data structure to BioFVM
 	double mechanics_voxel_size = 10; 
 	Cell_Container* cell_container = create_cell_container_for_microenvironment( microenvironment, mechanics_voxel_size );

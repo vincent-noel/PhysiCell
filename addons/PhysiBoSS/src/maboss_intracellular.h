@@ -55,6 +55,7 @@ class MaBoSSIntracellular : public PhysiCell::Intracellular {
 	
 	void update() {
 		this->maboss.run_simulation();
+		// std::cout << this->maboss.get_time_to_update() << "\n";
 		this->next_physiboss_run += this->maboss.get_time_to_update();
 	}
 	
