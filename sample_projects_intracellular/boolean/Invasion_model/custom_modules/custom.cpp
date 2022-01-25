@@ -220,90 +220,6 @@ void setup_tissue( void )
 	return; 
 }
 
-std::vector<std::string> ECM_coloring_function( Cell* pCell )
-{
-	std::vector< std::string > output( 4 , "black" );
-	double ecm_value = pCell->custom_data["ecm_contact"];
-	int color = (int) round( ecm_value * 255.0 / (pCell->phenotype.geometry.radius)  );
-	if(color > 255){
-		color = 255;
-	}
-	char szTempString [128];
-	sprintf( szTempString , "rgb(%u,0,%u)", color, 255-color );
-	output[0].assign( szTempString );
-	return output;
-
-}
-
-std::vector<std::string> phase_coloring_function( Cell* pCell )
-{
-	std::vector< std::string > output( 4 , "rgb(0,0,0)" );
-
-	if ( pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::Ki67_negative )
-	{
-		output[0] = "rgb(0,255,0)"; //green
-		output[2] = "rgb(0,125,0)";
-		
-	}
-	if ( pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::Ki67_positive_premitotic )
-	{
-		output[0] = "rgb(255,0,0)"; //red
-		output[2] = "rgb(125,0,0)";
-		
-	}
-	if ( pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::Ki67_positive_postmitotic )
-	{
-		output[0] = "rgb(255,255,0)"; //yellow
-		output[2] = "rgb(125,125,0)";
-		
-	}
-	if (pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::necrotic_swelling || 
-		pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::necrotic_lysed || 
-		pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::necrotic )
-	{
-		output[0] = "rgb(165,42,42)"; //brown
-		output[2] = "rgb(165,42,42)";
-	}
-	if (pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::apoptotic )  
-	{
-		output[0] = "rgb(0,0,0)";
-		output[2] = "rgb(0,0,0)";
-	}
-	return output;
-}
-
-std::vector<std::string> node_coloring_function( Cell* pCell )
-{
-	std::vector< std::string > output( 4 , "rgb(0,0,0)" );
-	//std::cout << pCell->phenotype.intracellular->get_boolean_node_value( parameters.strings("node_to_visualize"));
-	if ( !pCell->phenotype.intracellular->get_boolean_variable_value( parameters.strings("node_to_visualize") ) ) //node off
-	{
-		output[0] = "rgb(0,0,255)"; //blue
-		output[2] = "rgb(0,0,125)";
-		
-	}
-	else{
-		output[0] = "rgb(255,0,0)"; //red
-		output[2] = "rgb(125,0,0)";
-	}
-	
-	return output;
-}
-
-
-std::vector<std::string> my_coloring_function( Cell* pCell )
-{
-	
-	 int color_number = parameters.ints("color_function");
-
-	 if (color_number == 0)
-	 	return ECM_coloring_function(pCell);
-	 if (color_number == 1)
-	 	return phase_coloring_function(pCell);
-	 else 
-	 	return node_coloring_function( pCell );
-}
-
 void tumor_cell_phenotype_with_signaling( Cell* pCell, Phenotype& phenotype, double dt )
 {
 
@@ -321,7 +237,6 @@ void tumor_cell_phenotype_with_signaling( Cell* pCell, Phenotype& phenotype, dou
 		set_input_nodes(pCell);
 		//std::cout << std::endl;
 		pCell->phenotype.intracellular->update();
-		//std::cout << pCustomCell->cell_contact;
 		//std::cout << pCell->phenotype.intracellular->get_boolean_node_value("Cell_growth");
 		//pCell->phenotype.intracellular->print_current_nodes();
 		//std::cout << std::endl;
@@ -379,7 +294,7 @@ void from_nodes_to_cell(Cell* pCell, Phenotype& phenotype, double dt)
 	{
 		int apoptosis_model_index = cell_defaults.phenotype.death.find_death_model_index( "apoptosis" );
 		pCell->start_death(apoptosis_model_index);
-		//std::cout << "died for apoptosis!"<< std::endl;
+		std::cout << "died for apoptosis!"<< std::endl;
 		return;
 	}
 	/*
@@ -522,8 +437,9 @@ double custom_adhesion_function(Cell* pCell, Cell* otherCell, double distance)
 			// active, active
 			else
 			{
-				//std::cout << distance << "  ";
-				pCell->custom_data["cell_contact"] += distance;
+				double perc_distance = distance / pCell->phenotype.geometry.radius ;
+				pCell->custom_data["cell_contact"] += perc_distance;
+				//std::cout << pCell->custom_data["cell_contact"] << "\n";
 				adh = adhesion(pCell, otherCell);
 				pCell->custom_data["adh"] = adh;
 			}
@@ -559,6 +475,8 @@ std::vector<Cell*> get_possible_neighbors( Cell* pCell )
 		for(neighbor = pCell->get_container()->agent_grid[*neighbor_voxel_index].begin();neighbor != end; ++neighbor)
 		{ neighbors.push_back( *neighbor ); }
 	}
+
+	//std::cout << neighbors.size() << "\n";
 	
 	return neighbors;
 
@@ -568,9 +486,14 @@ std::vector<Cell*> get_possible_neighbors( Cell* pCell )
 void ecm_cell_function (Cell* pCell, Phenotype& phenotype, double dt){
 
 	std::vector<Cell*> neighbors = get_possible_neighbors(pCell);
+
+	if (neighbors.size() == 0){
+
+		return ; // what happened if I don't have any neigh? should I set adhesion and repulsion to 0? I think so...
+	};
 	
 	Cell* OtherCell = NULL;
-
+	pCell->custom_data["cell_contact"] = 0;
 	for( int n=0; n < neighbors.size() ; n++ )
 	{
 		OtherCell = neighbors[n]; 
@@ -584,11 +507,18 @@ void ecm_cell_function (Cell* pCell, Phenotype& phenotype, double dt){
 			
 			double max_distance = pCell->phenotype.geometry.radius + 
 				OtherCell->phenotype.geometry.radius; 
-			max_distance *= 1.1; 
+			max_distance *=  1.1;  //parameters.doubles("max_interaction_factor"); 
+
+			//std::cout << max_distance << " - " << distance << "\n";
+
+			double interaction_distance = max_distance - distance;
+			if (interaction_distance < 0){
+				continue ;
+			}
 			
 			// calculate adhesion using custom function
+			pCell->phenotype.mechanics.cell_cell_adhesion_strength = custom_adhesion_function(pCell, OtherCell, interaction_distance);
 
-			pCell->phenotype.mechanics.cell_cell_adhesion_strength = custom_adhesion_function(pCell, OtherCell, max_distance);
 
 			// calculate repulsion with custom function
 
@@ -596,6 +526,8 @@ void ecm_cell_function (Cell* pCell, Phenotype& phenotype, double dt){
 
 		}
 	}
+
+	std::cout << pCell->custom_data["cell_contact"] << "\n";
 
 
 }
@@ -717,21 +649,21 @@ void add_TGFbeta_interaction(Cell* pC, int index_voxel){
 	if(ratio < PhysiCell::parameters.doubles("ECM_TGFbeta_ratio")){
 	pC->custom_data["TGFbeta_contact"] = 0;
 	//std::cout << "dens =" << dens << std::endl; 
-	if ( dens_tgfb > EPSILON )
-	{
-		// Distance between agent center and ECM voxel center
-		pC->displacement = pC->position - pC->get_container()->underlying_mesh.voxels[index_voxel].center;
-		double distance = norm(pC->displacement);
-		// Make sure that the distance is not zero
-		distance = std::max(distance, EPSILON);
+		if ( dens_tgfb > EPSILON )
+		{
+			// Distance between agent center and ECM voxel center
+			pC->displacement = pC->position - pC->get_container()->underlying_mesh.voxels[index_voxel].center;
+			double distance = norm(pC->displacement);
+			// Make sure that the distance is not zero
+			distance = std::max(distance, EPSILON);
 
-		double max_interactive_distance = (PhysiCell::parameters.doubles("max_interaction_factor")*pC->phenotype.geometry.radius) + ecmrad;
-		if ( distance < max_interactive_distance ) 
-		{	
-			pC->custom_data["TGFbeta_contact"] += dens_tgfb * (max_interactive_distance-distance);
-			//std::cout << "TGFbeta =" << pC->custom_data["TGFbeta_contact"] << std::endl; 
+			double max_interactive_distance = (PhysiCell::parameters.doubles("max_interaction_factor")*pC->phenotype.geometry.radius) + ecmrad;
+			if ( distance < max_interactive_distance ) 
+			{	
+				pC->custom_data["TGFbeta_contact"] += dens_tgfb * (max_interactive_distance-distance);
+				//std::cout << "TGFbeta =" << pC->custom_data["TGFbeta_contact"] << std::endl; 
+			}
 		}
-	}
 	}
 }
 
@@ -739,8 +671,6 @@ void custom_update_velocity( Cell* pCell, Phenotype& phenotype, double dt)
 {
 	pCell->custom_data["ecm_contact"] = 0;
 	pCell->custom_data["nucleus_deform"] = 0;
-	pCell->custom_data["TGFbeta_contact"] = 0;
-	pCell->custom_data["cell_contact"] = 0;
 	
 	if( pCell->functions.add_cell_basement_membrane_interactions )
 	{
@@ -755,31 +685,38 @@ void custom_update_velocity( Cell* pCell, Phenotype& phenotype, double dt)
 		pCell->add_potentials( neighbor );
 	}
 
-	int ecm_index = BioFVM::microenvironment.find_density_index("ecm");
-	if ( ecm_index >= 0 )
-		add_ecm_interaction( pCell, ecm_index, pCell->get_current_mechanics_voxel_index() );
-		add_TGFbeta_interaction(pCell, pCell->get_current_mechanics_voxel_index());
+	pCell->state.simple_pressure = 0.0; 
+	pCell->state.neighbors.clear(); // new 1.8.0
 
-	for (auto neighbor_voxel_index : pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()])
+	std::vector<Cell*>::iterator neighbor;
+	std::vector<Cell*>::iterator end = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
+	for(neighbor = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].begin(); neighbor != end; ++neighbor)
 	{
-		if(!is_neighbor_voxel(pCell, pCell->get_container()->underlying_mesh.voxels[pCell->get_current_mechanics_voxel_index()].center, pCell->get_container()->underlying_mesh.voxels[neighbor_voxel_index].center, neighbor_voxel_index))
-			continue;
+		pCell->add_potentials(*neighbor);
+	}
+	std::vector<int>::iterator neighbor_voxel_index;
+	std::vector<int>::iterator neighbor_voxel_index_end = 
+		pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].end();
 
-		if ( ecm_index >= 0 )
-			add_ecm_interaction( pCell, ecm_index, neighbor_voxel_index );
-			add_TGFbeta_interaction(pCell, pCell->get_current_mechanics_voxel_index());
-		for( auto other_neighbor : pCell->get_container()->agent_grid[neighbor_voxel_index] )
+	for( neighbor_voxel_index = 
+		pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].begin();
+		neighbor_voxel_index != neighbor_voxel_index_end; 
+		++neighbor_voxel_index )
+	{
+		if(!is_neighbor_voxel(pCell, pCell->get_container()->underlying_mesh.voxels[pCell->get_current_mechanics_voxel_index()].center, pCell->get_container()->underlying_mesh.voxels[*neighbor_voxel_index].center, *neighbor_voxel_index))
+			continue;
+		end = pCell->get_container()->agent_grid[*neighbor_voxel_index].end();
+		for(neighbor = pCell->get_container()->agent_grid[*neighbor_voxel_index].begin();neighbor != end; ++neighbor)
 		{
-			pCell->add_potentials(other_neighbor);
+			pCell->add_potentials(*neighbor);
 		}
 	}
-	
-	//std::cout << pCustomCell->cell_contact << "  ";
-	/*
-	if((pCustomCell->ecm_contact) > (pCustomCell->cell_contact * PhysiCell::parameters.doubles("ecm_cell_contact_factor"))){
-		pCustomCell->padhesion = 0;
+
+	int ecm_index = BioFVM::microenvironment.find_density_index("ecm");
+	if ( ecm_index >= 0 ){
+		add_ecm_interaction( pCell, ecm_index, pCell->get_current_mechanics_voxel_index() );
+		add_TGFbeta_interaction(pCell, pCell->get_current_mechanics_voxel_index());
 	}
-*/
 /*
 	if (pCell->custom_data["freezed"] > 2){
 		return ;
@@ -815,7 +752,6 @@ void set_substrate_density(int density_index, double concentration, double radiu
 bool has_neighbor(Cell* pCell, int level)
 { 
 	if ( level == 0 ){
-		//std::cout << contact_cell() << " - " << PhysiCell::parameters.doubles("contact_cell_cell_threshold") << std::endl;
 		return contact_cell(pCell) > PhysiCell::parameters.doubles("contact_cell_cell_threshold"); 
 		}
 	else{
@@ -993,16 +929,345 @@ void start_SRC_mutation(bool light_on){
  //double outer_radius = 150;
  for (auto voxel : microenvironment.mesh.voxels) {
 	 //std::cout << voxel.center;
- // Compute norm to center
- double t_norm = norm(voxel.center);
- // If norm is in [inner_radius, outer_radius], then we add it
- if(t_norm < light_radius && light_on){
- 	microenvironment.density_vector(voxel.mesh_index)[microenvironment.find_density_index("light")] = 1;
- }
- else{
-	 microenvironment.density_vector(voxel.mesh_index)[microenvironment.find_density_index("light")] = 0;
- }
- }
+	 // Compute norm to center
+ 	double t_norm = norm(voxel.center);
+ 	// If norm is in [inner_radius, outer_radius], then we add it
+ 	if(t_norm < light_radius && light_on){
+ 		microenvironment.density_vector(voxel.mesh_index)[microenvironment.find_density_index("light")] = 1;
+ 	}
+ 	else{
+	 	microenvironment.density_vector(voxel.mesh_index)[microenvironment.find_density_index("light")] = 0;
+ 		}
+ 	}
+}
+
+	// FUNCTIONS TO PLOT CELLS
+
+std::vector<std::string> ECM_coloring_function( Cell* pCell )
+{
+	std::vector< std::string > output( 4 , "black" );
+	double ecm_value = pCell->custom_data["ecm_contact"];
+	int color = (int) round( ecm_value * 255.0 / (pCell->phenotype.geometry.radius)  );
+	if(color > 255){
+		color = 255;
+	}
+	char szTempString [128];
+	sprintf( szTempString , "rgb(%u,0,%u)", color, 255-color );
+	output[0].assign( szTempString );
+	return output;
 
 }
 
+std::vector<std::string> phase_coloring_function( Cell* pCell )
+{
+	std::vector< std::string > output( 4 , "rgb(0,0,0)" );
+
+	if ( pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::Ki67_negative )
+	{
+		output[0] = "rgb(0,255,0)"; //green
+		output[2] = "rgb(0,125,0)";
+		
+	}
+	if ( pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::Ki67_positive_premitotic )
+	{
+		output[0] = "rgb(255,0,0)"; //red
+		output[2] = "rgb(125,0,0)";
+		
+	}
+	if ( pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::Ki67_positive_postmitotic )
+	{
+		output[0] = "rgb(255,255,0)"; //yellow
+		output[2] = "rgb(125,125,0)";
+		
+	}
+	if (pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::necrotic_swelling || 
+		pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::necrotic_lysed || 
+		pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::necrotic )
+	{
+		output[0] = "rgb(165,42,42)"; //brown
+		output[2] = "rgb(165,42,42)";
+	}
+	if (pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::apoptotic )  
+	{
+		output[0] = "rgb(0,0,0)";
+		output[2] = "rgb(0,0,0)";
+	}
+	return output;
+}
+
+std::vector<std::string> node_coloring_function( Cell* pCell )
+{
+	std::vector< std::string > output( 4 , "rgb(0,0,0)" );
+	//std::cout << pCell->phenotype.intracellular->get_boolean_node_value( parameters.strings("node_to_visualize"));
+	if ( !pCell->phenotype.intracellular->get_boolean_variable_value( parameters.strings("node_to_visualize") ) ) //node off
+	{
+		output[0] = "rgb(0,0,255)"; //blue
+		output[2] = "rgb(0,0,125)";
+		
+	}
+	else{
+		output[0] = "rgb(255,0,0)"; //red
+		output[2] = "rgb(125,0,0)";
+	}
+	
+	return output;
+}
+
+
+std::vector<std::string> my_coloring_function( Cell* pCell )
+{
+	
+	 int color_number = parameters.ints("color_function");
+
+	 if (color_number == 0)
+	 	return ECM_coloring_function(pCell);
+	 if (color_number == 1)
+	 	return phase_coloring_function(pCell);
+	 else 
+	 	return node_coloring_function( pCell );
+}
+
+void SVG_plot_ecm( std::string filename , Microenvironment& M, double z_slice , double time, std::vector<std::string> (*cell_coloring_function)(Cell*), std::string sub )
+{
+
+
+	double X_lower = M.mesh.bounding_box[0];
+	double X_upper = M.mesh.bounding_box[3];
+ 
+	double Y_lower = M.mesh.bounding_box[1]; 
+	double Y_upper = M.mesh.bounding_box[4]; 
+
+	double plot_width = X_upper - X_lower; 
+	double plot_height = Y_upper - Y_lower; 
+
+	double font_size = 0.025 * plot_height; // PhysiCell_SVG_options.font_size; 
+	double top_margin = font_size*(.2+1+.2+.9+.5 ); 
+
+	// open the file, write a basic "header"
+	std::ofstream os( filename , std::ios::out );
+	if( os.fail() )
+	{ 
+		std::cout << std::endl << "Error: Failed to open " << filename << " for SVG writing." << std::endl << std::endl; 
+
+		std::cout << std::endl << "Error: We're not writing data like we expect. " << std::endl
+		<< "Check to make sure your save directory exists. " << std::endl << std::endl
+		<< "I'm going to exit with a crash code of -1 now until " << std::endl 
+		<< "you fix your directory. Sorry!" << std::endl << std::endl; 
+		exit(-1); 
+	} 
+	
+	Write_SVG_start( os, plot_width , plot_height + top_margin );
+
+	// draw the background 
+	Write_SVG_rect( os , 0 , 0 , plot_width, plot_height + top_margin , 0.002 * plot_height , "white", "white" );
+
+	// write the simulation time to the top of the plot
+ 
+	char* szString; 
+	szString = new char [1024]; 
+ 
+	int total_cell_count = all_cells->size(); 
+ 
+	double temp_time = time; 
+
+	std::string time_label = formatted_minutes_to_DDHHMM( temp_time ); 
+ 
+	sprintf( szString , "Current time: %s, z = %3.2f %s", time_label.c_str(), 
+		z_slice , PhysiCell_SVG_options.simulation_space_units.c_str() ); 
+	Write_SVG_text( os, szString, font_size*0.5,  font_size*(.2+1), 
+		font_size, PhysiCell_SVG_options.font_color.c_str() , PhysiCell_SVG_options.font.c_str() );
+	sprintf( szString , "%u agents" , total_cell_count ); 
+	Write_SVG_text( os, szString, font_size*0.5,  font_size*(.2+1+.2+.9), 
+		0.95*font_size, PhysiCell_SVG_options.font_color.c_str() , PhysiCell_SVG_options.font.c_str() );
+	
+	delete [] szString; 
+
+
+	// add an outer "g" for coordinate transforms 
+	
+	os << " <g id=\"tissue\" " << std::endl 
+	   << "    transform=\"translate(0," << plot_height+top_margin << ") scale(1,-1)\">" << std::endl; 
+	   
+	// prepare to do mesh-based plot (later)
+	
+	double dx_stroma = M.mesh.dx; 
+	double dy_stroma = M.mesh.dy; 
+	double dz_stroma = M.mesh.dz;
+	
+	os << "  <g id=\"ECM\">" << std::endl; 
+  
+	int ratio = 1; 
+	double voxel_size = dx_stroma / (double) ratio ; 
+  
+	double half_voxel_size = voxel_size / 2.0; 
+	double normalizer = 78.539816339744831 / (voxel_size*voxel_size*voxel_size); 
+	
+	// color the dark background 
+
+	for (int n = 0; n < M.number_of_voxels(); n++)
+	{
+		auto current_voxel = M.voxels(n);
+		int z_center = current_voxel.center[2];
+		double z_displ = z_center -  dz_stroma/2;
+		//std::cout << z_center ;
+		if (z_center == z_slice){
+
+			int x_center = current_voxel.center[0];
+			int y_center = current_voxel.center[1];
+			
+			double x_displ = x_center -  dx_stroma/2;
+			double y_displ = (y_center - dy_stroma) +  dy_stroma/2;
+			//std::cout <<  x_displ - X_lower << "  __  " << y_displ - Y_lower << "\n" ;
+			int sub_index = M.find_density_index(sub);
+
+			double concentration = M.density_vector(n)[sub_index];
+
+			std::vector< std::string > output( 4 , "black" );
+			int color = (int) round( concentration * 255.0 );
+			if(color > 255){
+				color = 255;
+			}
+			char szTempString [128];
+			sprintf( szTempString , "rgb(255, %u, %u)", 222 - color, 173 -color );
+			output[0].assign( szTempString );
+
+			Write_SVG_rect( os , x_displ - X_lower , y_displ - Y_lower, dx_stroma, dy_stroma , 0 , "none", output[0] );
+		}
+
+	}
+
+	// Write_SVG_rect( os , 0 , 0 , plot_width, plot_height , 0 , "none", "black" );
+
+ 
+ // color in the background ECM
+/* 
+ if( ECM.TellRows() > 0 )
+ {
+  // find the k corresponding to z_slice
+  
+  
+  
+  Vector position; 
+  *position(2) = z_slice; 
+  
+
+  // 25*pi* 5 microns^2 * length (in source) / voxelsize^3
+  
+  for( int j=0; j < ratio*ECM.TellCols() ; j++ )
+  {
+   // *position(1) = *Y_environment(j); 
+   *position(1) = *Y_environment(0) - dy_stroma/2.0 + j*voxel_size + half_voxel_size; 
+   
+   for( int i=0; i < ratio*ECM.TellRows() ; i++ )
+   {
+    // *position(0) = *X_environment(i); 
+    *position(0) = *X_environment(0) - dx_stroma/2.0 + i*voxel_size + half_voxel_size; 
+	
+    double E = evaluate_Matrix3( ECM, X_environment , Y_environment, Z_environment , position );	
+	double BV = normalizer * evaluate_Matrix3( OxygenSourceHD, X_environment , Y_environment, Z_environment , position );
+	if( isnan( BV ) )
+	{ BV = 0.0; }
+
+	vector<string> Colors;
+	Colors = hematoxylin_and_eosin_stroma_coloring( E , BV );
+	Write_SVG_rect( os , *position(0)-half_voxel_size-X_lower , *position(1)-half_voxel_size+top_margin-Y_lower, 
+	voxel_size , voxel_size , 1 , Colors[0], Colors[0] );
+   
+   }
+  }
+ 
+ }
+*/
+	os << "  </g>" << std::endl; 
+
+ 
+	// plot intersecting cells 
+	os << "  <g id=\"cells\">" << std::endl; 
+	for( int i=0 ; i < total_cell_count ; i++ )
+	{
+		Cell* pC = (*all_cells)[i]; // global_cell_list[i]; 
+  
+		static std::vector<std::string> Colors; 
+		if( fabs( (pC->position)[2] - z_slice ) < pC->phenotype.geometry.radius )
+		{
+			double r = pC->phenotype.geometry.radius ; 
+			double rn = pC->phenotype.geometry.nuclear_radius ; 
+			double z = fabs( (pC->position)[2] - z_slice) ; 
+   
+			Colors = cell_coloring_function( pC ); 
+
+			os << "   <g id=\"cell" << pC->ID << "\">" << std::endl; 
+  
+			// figure out how much of the cell intersects with z = 0 
+   
+			double plot_radius = sqrt( r*r - z*z ); 
+
+			Write_SVG_circle( os, (pC->position)[0]-X_lower, (pC->position)[1]-Y_lower, 
+				plot_radius , 0.5, Colors[1], Colors[0] ); 
+
+			// plot the nucleus if it, too intersects z = 0;
+			if( fabs(z) < rn && PhysiCell_SVG_options.plot_nuclei == true )
+			{   
+				plot_radius = sqrt( rn*rn - z*z ); 
+			 	Write_SVG_circle( os, (pC->position)[0]-X_lower, (pC->position)[1]-Y_lower, 
+					plot_radius, 0.5, Colors[3],Colors[2]); 
+			}					  
+			os << "   </g>" << std::endl;
+		}
+	}
+	os << "  </g>" << std::endl; 
+	
+	// end of the <g ID="tissue">
+	os << " </g>" << std::endl; 
+ 
+	// draw a scale bar
+ 
+	double bar_margin = 0.025 * plot_height; 
+	double bar_height = 0.01 * plot_height; 
+	double bar_width = PhysiCell_SVG_options.length_bar; 
+	double bar_stroke_width = 0.001 * plot_height; 
+	
+	std::string bar_units = PhysiCell_SVG_options.simulation_space_units; 
+	// convert from micron to mm
+	double temp = bar_width;  
+
+	if( temp > 999 && std::strstr( bar_units.c_str() , PhysiCell_SVG_options.mu.c_str() )   )
+	{
+		temp /= 1000;
+		bar_units = "mm";
+	}
+	// convert from mm to cm 
+	if( temp > 9 && std::strcmp( bar_units.c_str() , "mm" ) == 0 )
+	{
+		temp /= 10; 
+		bar_units = "cm";
+	}
+	
+	szString = new char [1024];
+	sprintf( szString , "%u %s" , (int) round( temp ) , bar_units.c_str() );
+ 
+	Write_SVG_rect( os , plot_width - bar_margin - bar_width  , plot_height + top_margin - bar_margin - bar_height , 
+		bar_width , bar_height , 0.002 * plot_height , "rgb(255,255,255)", "rgb(0,0,0)" );
+	Write_SVG_text( os, szString , plot_width - bar_margin - bar_width + 0.25*font_size , 
+		plot_height + top_margin - bar_margin - bar_height - 0.25*font_size , 
+		font_size , PhysiCell_SVG_options.font_color.c_str() , PhysiCell_SVG_options.font.c_str() ); 
+	
+	delete [] szString; 
+
+	// plot runtime 
+	szString = new char [1024]; 
+	RUNTIME_TOC(); 
+	std::string formatted_stopwatch_value = format_stopwatch_value( runtime_stopwatch_value() );
+	Write_SVG_text( os, formatted_stopwatch_value.c_str() , bar_margin , top_margin + plot_height - bar_margin , 0.75 * font_size , 
+		PhysiCell_SVG_options.font_color.c_str() , PhysiCell_SVG_options.font.c_str() );
+	delete [] szString; 
+
+	// draw a box around the plot window
+	Write_SVG_rect( os , 0 , top_margin, plot_width, plot_height , 0.002 * plot_height , "rgb(0,0,0)", "none" );
+	
+	// close the svg tag, close the file
+	Write_SVG_end( os ); 
+	os.close();
+ 
+	return; 
+}

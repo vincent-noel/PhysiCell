@@ -97,6 +97,7 @@ std::vector<std::string> my_coloring_function( Cell* );
 std::vector<std::string> ECM_coloring_function( Cell* );
 std::vector<std::string> phase_coloring_function( Cell* );
 std::vector<std::string> node_coloring_function( Cell* );
+void SVG_plot_ecm( std::string filename , Microenvironment& M, double z_slice , double time, std::vector<std::string> (*cell_coloring_function)(Cell*), std::string sub );
 
 // custom cell phenotype functions could go here 
 void tumor_cell_phenotype_with_signaling( Cell* pCell, Phenotype& phenotype, double dt );
@@ -155,7 +156,7 @@ inline double get_motility_amplitude( double percent )
 
 /** \brief Return amount of contact with other cells */
 inline double contact_cell(Cell* pCell)
-	{ double contact =  pCell->custom_data["cell_contact"] / pCell->phenotype.geometry.radius; return contact; };
+	{ double contact =  pCell->custom_data["cell_contact"]; return contact; };
 
 /** \brief (De)-Activate ECM degradation by the cell */
 void set_mmp( Cell* pCell, int activate );

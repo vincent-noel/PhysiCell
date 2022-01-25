@@ -130,11 +130,9 @@ int main( int argc, char* argv[] )
 	
 	/* Users typically start modifying here. START USERMODS */ 
 	
-	double src_activation_time = 
-		PhysiCell::parameters.doubles("src_activation_time"); // 60 * 24 * 14; // 
+	double src_activation_time = PhysiCell::parameters.doubles("src_activation_time"); // 60 * 24 * 14; // 
 
-	double src_stop_time = 
-		PhysiCell::parameters.doubles("src_stop_time"); // 60 * 24 * 14; //
+	double src_stop_time = PhysiCell::parameters.doubles("src_stop_time"); // 60 * 24 * 14; //
 
 	create_cell_types();
 	
@@ -170,8 +168,11 @@ int main( int argc, char* argv[] )
 	
 	std::vector<std::string> (*cell_coloring_function)(Cell*) = my_coloring_function;
 	
+	std::string substrate = 
+		PhysiCell::parameters.strings("substrate_to_monitor");	
+
 	sprintf( filename , "%s/initial.svg" , PhysiCell_settings.folder.c_str() ); 
-	SVG_plot( filename , microenvironment, 0.0 , PhysiCell_globals.current_time, cell_coloring_function );
+	SVG_plot_ecm( filename , microenvironment, 0.0 , PhysiCell_globals.current_time, cell_coloring_function, substrate );
 	
 	display_citations(); 
 	
@@ -253,8 +254,7 @@ int main( int argc, char* argv[] )
 				if( PhysiCell_settings.enable_SVG_saves == true )
 				{	
 					sprintf( filename , "%s/snapshot%08u.svg" , PhysiCell_settings.folder.c_str() , PhysiCell_globals.SVG_output_index ); 
-					SVG_plot( filename , microenvironment, 0.0 , PhysiCell_globals.current_time, cell_coloring_function );
-					
+					SVG_plot_ecm( filename , microenvironment, 0.0 , PhysiCell_globals.current_time, cell_coloring_function, substrate );
 					PhysiCell_globals.SVG_output_index++; 
 					PhysiCell_globals.next_SVG_save_time  += PhysiCell_settings.SVG_save_interval;
 				}
