@@ -16,7 +16,7 @@ Node HIF1A {
 
 // 1) 2)
 Node FAK {
-  logic = (ECM | SRC) & !p53; // FAK is also activated by changes in stiffness in the ECM 
+  logic = (ECM) & !p53; // FAK is also activated by changes in stiffness in the ECM 
   rate_up = @logic ? $u_FAK : 0.0;
   rate_down = @logic ? 0.0 : $d_FAK;
 }
@@ -81,6 +81,12 @@ Node MMPs {
   logic =  ((NICD & EMT & SMAD)| p63) & !p73;
   rate_up = @logic ? $u_MMPs : 0.0;
   rate_down = @logic ? 0.0 : $d_MMPs;
+}
+
+Node optoSRC {
+  logic = (optoSRC);
+  rate_up = @logic ? $u_optoSRC : 0.0;
+  rate_down = @logic ? 0.0 : $d_optoSRC;
 }
 
 // Directed interactions from Signor Adhesome

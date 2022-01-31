@@ -251,7 +251,7 @@ void tumor_cell_phenotype_with_signaling( Cell* pCell, Phenotype& phenotype, dou
 void set_input_nodes(Cell* pCell) 
 {	
 
-	pCell->phenotype.intracellular->set_boolean_variable_value("SRC", sense_light(pCell));
+	pCell->phenotype.intracellular->set_boolean_variable_value("optoSRC", sense_light(pCell));
 	
 	pCell->phenotype.intracellular->set_boolean_variable_value("Oxy", !necrotic_oxygen(pCell));
 	
@@ -279,11 +279,19 @@ void set_input_nodes(Cell* pCell)
 	// If nucleus is deformed, probability of damage
 	// Change to increase proba with deformation ? + put as parameter
 	
-	if ( pCell->phenotype.intracellular->has_variable( "DNAdamage" ) )
+	/*if ( pCell->phenotype.intracellular->has_variable( "DNAdamage" ) )
 		pCell->phenotype.intracellular->set_boolean_variable_value("DNAdamage", 
 			( pCell->custom_data["nucleus_deform"] > 0.5 ) ? (2*PhysiCell::UniformRandom() < pCell->custom_data["nucleus_deform"]) : 0
+		);*/
+
+	if ( pCell->phenotype.intracellular->has_variable( "DNAdamage" ) ){
+
+		double pressure = pCell->state.simple_pressure;
+		double pressure_threshold = 8.0;
+		pCell->phenotype.intracellular->set_boolean_variable_value("DNAdamage", 
+			( pressure > pressure_threshold ) ? (8 * PhysiCell::UniformRandom() < pressure) : 0
 		);
-	
+	}
 	/// example
 	
 }
@@ -331,9 +339,12 @@ void from_nodes_to_cell(Cell* pCell, Phenotype& phenotype, double dt)
 	*/
 
 	if ( pCell->phenotype.intracellular->has_variable( "EMT" )){
-		evolve_cellcell_coef( pCell,
-			!(pCell->phenotype.intracellular->get_boolean_variable_value( "EMT" )), dt 
-		);}
+		evolve_cellcell_coef( pCell, !(pCell->phenotype.intracellular->get_boolean_variable_value( "EMT" )), dt);
+		if (pCell->phenotype.intracellular->get_boolean_variable_value( "EMT" ))
+			custom_detach_cells(pCell);
+		else
+			custom_cell_attach(pCell);
+		}
 
 	if ( pCell->phenotype.intracellular->has_variable( "ECM_adh" )){
 		evolve_integrin_coef( pCell,
@@ -397,6 +408,35 @@ double adhesion(Cell* pCell, Cell* other_cell )
 	return adh;
 }
 
+void custom_cell_attach(Cell* pCell){
+
+	// check the neighbors of current cells, if there is a high level of integrins, it triggers the attachment
+
+	std::vector<Cell*> neigh = pCell->nearby_interacting_cells(); 
+
+	double integrin = pCell->custom_data["padhesion"];
+
+	if (neigh.size() == 0)
+		return ;
+
+	for (int i = 0; i != neigh.size(); i++){
+
+		double otherIntegrin = neigh[i]->custom_data["padhesion"];
+
+		//should I also check the distance between the cells?
+
+		if (integrin + otherIntegrin > 0.6)
+			attach_cells( neigh[i] , pCell ); 
+
+	}
+
+}
+
+void custom_detach_cells(Cell* pCell){
+
+	pCell->remove_all_attached_cells();
+
+}
 
 double custom_repulsion_function(Cell* pCell, Cell* otherCell) 
 {
@@ -519,6 +559,8 @@ void ecm_cell_function (Cell* pCell, Phenotype& phenotype, double dt){
 			// calculate adhesion using custom function
 			pCell->phenotype.mechanics.cell_cell_adhesion_strength = custom_adhesion_function(pCell, OtherCell, interaction_distance);
 
+			//std::cout << pCell->phenotype.mechanics.cell_cell_adhesion_strength << " \n " ; 
+
 
 			// calculate repulsion with custom function
 
@@ -527,7 +569,7 @@ void ecm_cell_function (Cell* pCell, Phenotype& phenotype, double dt){
 		}
 	}
 
-	std::cout << pCell->custom_data["cell_contact"] << "\n";
+	//std::cout << pCell->custom_data["cell_contact"] << "\n";
 
 
 }
@@ -723,9 +765,9 @@ void custom_update_velocity( Cell* pCell, Phenotype& phenotype, double dt)
 	}
 */
 	
-		pCell->update_motility_vector(dt);
-		//std::cout << phenotype.motility.motility_vector << "  ";
-		pCell->velocity += phenotype.motility.motility_vector;
+	pCell->update_motility_vector(dt);
+	//std::cout << pCell->state.simple_pressure << " \n ";
+	pCell->velocity += phenotype.motility.motility_vector;
 	
 	return; 
 }
@@ -1128,7 +1170,16 @@ void SVG_plot_ecm( std::string filename , Microenvironment& M, double z_slice , 
 				color = 255;
 			}
 			char szTempString [128];
-			sprintf( szTempString , "rgb(255, %u, %u)", 222 - color, 173 -color );
+
+			int green = 222 - color;
+			int blue = 173 - color;
+
+			if (green < 0)
+				green = 0;
+			if (blue < 0)
+				blue = 0;
+
+			sprintf( szTempString , "rgb(255, %u, %u)", green, blue );
 			output[0].assign( szTempString );
 
 			Write_SVG_rect( os , x_displ - X_lower , y_displ - Y_lower, dx_stroma, dy_stroma , 0 , "none", output[0] );
@@ -1183,10 +1234,21 @@ void SVG_plot_ecm( std::string filename , Microenvironment& M, double z_slice , 
  
 	// plot intersecting cells 
 	os << "  <g id=\"cells\">" << std::endl; 
+
+
+	double lowest_pressure = 1.0;
+	double max_pressure = 1.0;
 	for( int i=0 ; i < total_cell_count ; i++ )
 	{
 		Cell* pC = (*all_cells)[i]; // global_cell_list[i]; 
-  
+
+		double pressure = pC->state.simple_pressure;
+
+		if (pressure < lowest_pressure)
+			lowest_pressure = pressure;
+		if (pressure > max_pressure)
+			max_pressure = pressure;
+
 		static std::vector<std::string> Colors; 
 		if( fabs( (pC->position)[2] - z_slice ) < pC->phenotype.geometry.radius )
 		{
@@ -1215,6 +1277,9 @@ void SVG_plot_ecm( std::string filename , Microenvironment& M, double z_slice , 
 			os << "   </g>" << std::endl;
 		}
 	}
+
+	std::cout << max_pressure << "  --  " << lowest_pressure;
+
 	os << "  </g>" << std::endl; 
 	
 	// end of the <g ID="tissue">

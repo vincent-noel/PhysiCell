@@ -134,7 +134,10 @@ inline void evolve_cellcell_coef(Cell* pC, int up, double dt )
 inline void evolve_motility_coef(Cell* pC, int up, double dt )
 {pC->custom_data["pmotility"] = evolve_coef( up, pC->custom_data["pmotility"], dt); return ;}; //maybe both pmotility and padhseion to move?
 
-	
+void custom_cell_attach(Cell* pCell);
+
+void custom_detach_cells(Cell* pCell);
+
 /** \brief Return value of adhesion strength with ECM according to integrin level */
 double integrinStrength(Cell* pCell);
 	
