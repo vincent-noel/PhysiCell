@@ -16,7 +16,7 @@ Node HIF1A {
 
 // 1) 2)
 Node FAK {
-  logic = (ECM) & !p53; // FAK is also activated by changes in stiffness in the ECM 
+  logic = (ECM | (SRC)) & !p53; // FAK is also activated by changes in stiffness in the ECM 
   rate_up = @logic ? $u_FAK : 0.0;
   rate_down = @logic ? 0.0 : $d_FAK;
 }
@@ -35,9 +35,9 @@ Node YAP1 {
   //rate_down = @logic ? 0.0 : $d_RHOA;
 //}
 
-// Directed interactions from Signor/Adhesome
+// Directed interactions from Signor/Adhesome + fak inhibites small gtpases that inhibites RAC and CDC42 activities, this is translated in FAK activates RAC
 Node RAC1 {
-  logic = (TGFbetaR | SRC | p21 | PIK3CA ) & !(AKT1 | AKT2 );
+  logic = ( SRC | FAK) & !(AKT1 | AKT2 );
   rate_up = @logic ? $u_RAC1 : 0.0;
   rate_down = @logic ? 0.0 : $d_RAC1;
 }
@@ -49,22 +49,21 @@ Node Cell_freeze {
   rate_down = @logic ? 0.0 : $d_Cell_freeze;
 }
 
-// 3)
 Node Cell_growth {
-  logic = ((ERK & !p21) | (AKT1 & AKT2 & PIK3CA) & !HIF1A); // Tumor in hypoxia condition has more aggressive phenotype
+  logic = ((ERK & !p21) | (AKT1 & AKT2 & PIK3CA)) & !HIF1A; // Tumor in hypoxia condition has more aggressive phenotype
   rate_up = @logic ? $u_Cell_growth : 0.0;
   rate_down = @logic ? 0.0 : $d_Cell_growth;
 }
 
 Node PIK3CA {
-  logic = (GF | SRC | RAC1);
+  logic = (GF | RAC1);
   rate_up = @logic ? $u_PIK3CA : 0.0;
   rate_down = @logic ? 0.0 : $d_PIK3CA;
 }
 
 // Cell develop adhesion at CDH2 activation (which means CDH1 OFF and EMT ON), when in contact with the ECM
 Node ECM_adh {
-  logic = (ECM & EMT & !CDH1 & SMAD);
+  logic = (NICD & !CDH1 & SMAD) | RAC1;
   rate_up = @logic ? $u_ECM_adh : 0.0;
   rate_down = @logic ? 0.0 : $d_ECM_adh;
 }
@@ -78,7 +77,7 @@ Node ECM_degrad {
 // MMP activation requires physical contat with the ECM and EMT activation + p63 comes from Chavrier's experiments
 
 Node MMPs {
-  logic =  ((NICD & EMT & SMAD)| p63) & !p73;
+  logic =  ((NICD & EMT & SMAD)| p63 | RAC1) & !p73;
   rate_up = @logic ? $u_MMPs : 0.0;
   rate_down = @logic ? 0.0 : $d_MMPs;
 }
@@ -91,7 +90,7 @@ Node optoSRC {
 
 // Directed interactions from Signor Adhesome
 Node SRC {
-  logic = (FAK | AKT1) | optoSRC;
+  logic = (FAK | optoSRC);
   rate_up = @logic ? $u_SRC : 0.0;
   rate_down = @logic ? 0.0 : $d_SRC;
 }
@@ -103,7 +102,7 @@ Node Neigh {
 }
 
 Node NICD {
-  logic = (!p73 & !p53 & !p63 & !miR34 & !miR200 & ECM);
+  logic = (!p73 & !p53 & !p63 & !miR34 & !miR200 & (ECM | FAK));
   rate_up = @logic ? $u_NICD : 0.0;
   rate_down = @logic ? 0.0 : $d_NICD;
 }
@@ -157,7 +156,7 @@ Node p53 {
 }
 
 Node AKT1 {
-  logic = (CTNNB1 & (NICD | TGFbetaR | GF | CDH2) & ! p53 & ! miR34 & ! CDH1);  // to check
+  logic = (CTNNB1 & (NICD | TGFbetaR | GF | CDH2) & ! p53 & ! miR34 & ! CDH1);  
   rate_up = @logic ? $u_AKT1 : 0.0;
   rate_down = @logic ? 0.0 : $d_AKT1;
 }
@@ -207,7 +206,7 @@ Node CDH1 {
 
 //N-Cadherin
 Node CDH2 {
-  logic = (TWIST1 & SRC);
+  logic = (TWIST1 | SRC);
   rate_up = @logic ? $u_CDH2 : 0.0;
   rate_down = @logic ? 0.0 : $d_CDH2;
 }
@@ -219,7 +218,7 @@ Node TGFbeta {
 }
 
 Node TGFbetaR {
-  logic = (!NICD & !CTNNB1 & ECM & TGFbeta) | (NICD & !CTNNB1 & TGFbeta);
+  logic = (NICD & !CTNNB1 & TGFbeta);
   rate_up = @logic ? $u_TGFbetaR : 0.0;
   rate_down = @logic ? 0.0 : $d_TGFbetaR;
 }
@@ -236,6 +235,8 @@ Node miR203 {
   rate_down = @logic ? 0.0 : $d_miR203;
 }
 
+
+// "Src-mediated phosphorylation of FAK at Tyr-925creates a SH2 binding site for the Grb2 adapter protein and has been connected to the activation of the extracellular signal regulated (ERK)/mitogen-activated protein (MAP) kinase pathway" from Christof R. Hauck et Al.
 Node ERK {
   logic = ((SMAD | CDH2 | GF | NICD) & !AKT1);
   rate_up = @logic ? $u_ERK : 0.0;
@@ -268,7 +269,7 @@ Node VIM {
 }
 
 Node EMT {
-  logic = (!CDH1 & CDH2) ;
+  logic = (!CDH1 & CDH2) | ( EMT & !NICD & !p53 & !miR203 & !miR200 & !ZEB2 & !AKT2) ;
   rate_up = @logic ? $u_EMT : 0.0;
   rate_down = @logic ? 0.0 : $d_EMT;
 }

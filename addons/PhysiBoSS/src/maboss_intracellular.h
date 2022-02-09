@@ -20,7 +20,7 @@ class MaBoSSIntracellular : public PhysiCell::Intracellular {
 	std::string bnd_filename;
 	std::string cfg_filename;
 	
-	double time_step = 12;
+	double time_step = 30;
 	bool discrete_time = false;
 	double time_tick = 0.5;
 	double scaling = 1.0;

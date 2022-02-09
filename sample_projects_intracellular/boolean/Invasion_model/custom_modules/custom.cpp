@@ -97,6 +97,7 @@ void create_cell_types( void )
 	
 	cell_defaults.functions.add_cell_basement_membrane_interactions = NULL; 
 	cell_defaults.functions.calculate_distance_to_membrane = NULL; 
+	cell_defaults.functions.contact_function = standard_elastic_contact_function;
 
 			/*
 	   This parses the cell definitions in the XML config file. 
@@ -159,11 +160,13 @@ void create_cell_types( void )
 void setup_microenvironment( void )
 {
 	// make sure to override and go back to 2D 
-	// if( default_microenvironment_options.simulate_2D == true )
-	// {
+	if( default_microenvironment_options.simulate_2D == true )
+	 {
 	// 	std::cout << "Warning: overriding XML config option and setting to 3D!" << std::endl; 
 	// 	default_microenvironment_options.simulate_2D = false; 
-	// }	
+		cell_defaults.functions.set_orientation = up_orientation; 
+		cell_defaults.phenotype.geometry.polarity = 1.0;
+	 }	
 
 	// initialize BioFVM 
 	initialize_microenvironment(); 	
@@ -425,7 +428,7 @@ void custom_cell_attach(Cell* pCell){
 
 		//should I also check the distance between the cells?
 
-		if (integrin + otherIntegrin > 0.6)
+		if (integrin + otherIntegrin > PhysiCell::parameters.doubles("cell_junctions_attach_threshold"))
 			attach_cells( neigh[i] , pCell ); 
 
 	}
@@ -434,7 +437,19 @@ void custom_cell_attach(Cell* pCell){
 
 void custom_detach_cells(Cell* pCell){
 
-	pCell->remove_all_attached_cells();
+	double integrin = pCell->custom_data["padhesion"];
+
+	for (auto cell_attached : pCell->state.attached_cells){
+
+		double otherIntegrin = cell_attached->custom_data["padhesion"];
+
+		if (integrin + otherIntegrin < PhysiCell::parameters.doubles("cell_junctions_detach_threshold"))
+			detach_cells( cell_attached , pCell );
+
+	};
+
+	if (integrin == 0.0)
+		pCell->remove_all_attached_cells();
 
 }
 
@@ -931,7 +946,7 @@ std::vector<std::vector<double>> create_cell_disc_positions(double cell_radius, 
 
 bool wait_for_cell_growth(Cell* pCell, Phenotype& phenotype, double dt){
 	//std::cout << pCell->phenotype.intracellular->get_boolean_variable_value("Cell_growth");
-	return !pCell->phenotype.intracellular->get_boolean_variable_value("Cell_growth");
+		return !pCell->phenotype.intracellular->get_boolean_variable_value("Cell_growth");
 
 }
 
@@ -1242,7 +1257,7 @@ void SVG_plot_ecm( std::string filename , Microenvironment& M, double z_slice , 
 	{
 		Cell* pC = (*all_cells)[i]; // global_cell_list[i]; 
 
-		double pressure = pC->state.simple_pressure;
+		double pressure = pC->custom_data["padhesion"];
 
 		if (pressure < lowest_pressure)
 			lowest_pressure = pressure;

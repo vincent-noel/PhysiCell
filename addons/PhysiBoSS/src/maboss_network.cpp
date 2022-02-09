@@ -130,7 +130,7 @@ void MaBoSSNetwork::print_nodes()
 	std::vector<Node*> nodes = this->network->getNodes();
 	for ( auto node: nodes )
 	{
-		std::cout << node->getLabel() << "=" << state.getNodeState(node) << "; ";
+		std::cout << node->getLabel() << "=" << state.getNodeState(node) << "; " << std::endl;
 		i++;
 	}
 	std::cout << std::endl;

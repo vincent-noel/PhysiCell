@@ -74,12 +74,12 @@
 
 <PhysiCell_settings version="devel-version">
 	<domain>
-		<x_min>-300</x_min>
-		<x_max>300</x_max>
-		<y_min>-300</y_min>
-		<y_max>300</y_max>
-		<z_min>-300</z_min>
-		<z_max>300</z_max>
+		<x_min>-400</x_min>
+		<x_max>400</x_max>
+		<y_min>-400</y_min>
+		<y_max>400</y_max>
+		<z_min>-400</z_min>
+		<z_max>400</z_max>
 		<dx>10</dx>
 		<dy>10</dy>
 		<dz>10</dz>
@@ -233,10 +233,10 @@
 				</motility>
 
 				<intracellular type="maboss">
-					<bnd_filename>./config/boolean_network/Invasion_net_with_FAK.bnd</bnd_filename>
+					<bnd_filename>./config/boolean_network/Invasion_net_feedback_EMT.bnd</bnd_filename>
 					<cfg_filename>./config/boolean_network/Invasion_net_with_FAK.cfg</cfg_filename>
 					<time_step>10</time_step>
-					<time_stochasticity>0.5</time_stochasticity>
+					<time_stochasticity>1</time_stochasticity>
 					<initial_values>
 					</initial_values>
 					<mutations>
@@ -247,13 +247,13 @@
 			</phenotype>
 
 			<custom_data>
-				<pintegrin type="double" units="">0.5</pintegrin>
+				<pintegrin type="double" units="">0</pintegrin>
 				<pmotility type="double" units="">0</pmotility>
-				<padhesion type="double" units="">0.5</padhesion>
+				<padhesion type="double" units="">0</padhesion>
 				<nucleus_deform type="double" units="">0</nucleus_deform>
 				<ecm_contact type="double" units="">0</ecm_contact>
 				<TGFbeta_contact type="double" units="">0</TGFbeta_contact>
-				<cell_contact type="double" units="">0</cell_contact>
+				<cell_contact type="double" units="">0.6</cell_contact>
 				<freezed type="int" units="">0</freezed>
 				<passive type="bool" units="">1</passive>
 			</custom_data>
@@ -266,11 +266,11 @@
 		<!-- src experiment parameters -->
 		<src_activation_time type="double" units="min">120</src_activation_time> <!--20160 -->
 		<src_stop_time type="double" units="min">1440</src_stop_time>
-		<config_radius_light type="double" units="" description="change the initial radius of the light illumination">20</config_radius_light> 
+		<config_radius_light type="double" units="" description="change the initial radius of the light illumination">15</config_radius_light> 
 		<!-- cell-substrates interaction paramaters --> 
 		<ecm_adhesion_min type="double" units="" description="used to set the min adhesion between cells and ECM"> 1 </ecm_adhesion_min>
 		<ecm_adhesion_max type="double" units="" description="used to set the min adhesion between cells and ECM"> 2 </ecm_adhesion_max>
-		<cell_ecm_repulsion type="double" units="" description="change the value of ECM repulsion"> 8.5 </cell_ecm_repulsion>
+		<cell_ecm_repulsion type="double" units="" description="change the value of ECM repulsion"> 7 </cell_ecm_repulsion>
 		<!-- cell parameters -->
 		<choose_adhesion_function type="int" units="dimensionless" description="switch between default adhesion function or custom">0</choose_adhesion_function>
 		<cell_radius type="double" units="" description="initial radius of the cells"> 8.413 </cell_radius>
@@ -282,11 +282,13 @@
 		<!-- threshold parameters -->
 		<contact_cell_ECM_threshold type="double" units="" description="change the threshold needed to trigger ECM interaction"> 0.05 </contact_cell_ECM_threshold>
 		<contact_TGFB_threshold type="double" units="" description="change the threshold needed to trigger TGFbeta interaction"> 0.02 </contact_TGFB_threshold>
-		<contact_cell_cell_threshold type="double" units="" description="change the treshold needed to trigger Neighbours and Neigh2 node"> 0.3 </contact_cell_cell_threshold>
+		<contact_cell_cell_threshold type="double" units="" description="change the threshold needed to trigger Neighbours and Neigh2 node"> 0.3 </contact_cell_cell_threshold>
+		<cell_junctions_attach_threshold type="double" units="" description="change the threshold needed to attach cells in cluster with cell junction">1.1</cell_junctions_attach_threshold>
+		<cell_junctions_detach_threshold type="double" units="" description="change the threshold needed to detach cells in cluster with cell junction">0.5</cell_junctions_detach_threshold>
 		<!-- motility parameters -->
-		<migration_bias type='double' units="" description="change value of migration bias for cells with migration node active">0.97</migration_bias>
-		<migration_speed type='double' units="micron/min" description="change value of migration speed for cells with migration node active">0.8</migration_speed>
-		<persistence type="double" units="min" description="change value of persistence for cells with migration node active">5</persistence>
+		<migration_bias type='double' units="" description="change value of migration bias for cells with migration node active">0.96</migration_bias>
+		<migration_speed type='double' units="micron/min" description="change value of migration speed for cells with migration node active">0.5</migration_speed>
+		<persistence type="double" units="min" description="change value of persistence for cells with migration node active">3</persistence>
     	<motility_amplitude_min type="double" units="" description="change the min value of motility amplitude"> 0.1 </motility_amplitude_min>
     	<motility_amplitude_max type="double" units="" description="change the max value of motility amplitude"> 0.8 </motility_amplitude_max>
     	<mode_motility type="int" units="" description="not used yet"> 1 </mode_motility>
@@ -299,7 +301,7 @@
 		<TGFbeta_degradation type="double" units="" description="chenage the amount of TGFbeta degraded by the cells"> 0.002 </TGFbeta_degradation>
 		<ECM_TGFbeta_ratio type="double" units="" description="change the threshold needed to start sensing TGFbeta inside a voxel with ECM (cell must degrades a certain amount of ECM before sensing TGFbeta)">0.75</ECM_TGFbeta_ratio>
 		<!-- visualization -->
-		<node_to_visualize type="string" units="" description="change the node to visualize in the plot tab when coloring cells by custom data value">EMT</node_to_visualize> <!-- insert the name of the node you want to visualize in paraview-->
+		<node_to_visualize type="string" units="" description="change the node to visualize in the plot tab when coloring cells by custom data value">Migration</node_to_visualize> <!-- insert the name of the node you want to visualize in paraview-->
 		<color_function type="int" units="" description="change the basic color function: 0 for ECM based color, 1 for phase based color, 2 for node based color">2</color_function> 
 	</user_parameters>
 	
