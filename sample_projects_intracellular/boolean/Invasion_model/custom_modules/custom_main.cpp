@@ -29,8 +29,8 @@ double evolve_coef( int up, double coef, double dt )
 
 	(coef) +=  (coef) * (1 - coef) * dt/10.0 ;
 
-	(coef) = (coef) > 1 ? (1-EPSILON) : (coef);
-	(coef) = (coef) < 0 ? (EPSILON) : (coef);
+	(coef) = (coef) >= 1 ? (1-EPSILON) : (coef);
+	(coef) = (coef) <= 0 ? (EPSILON) : (coef);
 
 	return coef;
 }
