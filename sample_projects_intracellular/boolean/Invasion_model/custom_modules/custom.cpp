@@ -135,14 +135,6 @@ void create_cell_types( void )
 
 	
 	// add custom data here, if any
-/* 	cell_defaults.custom_data.add_variable("ecm_contact", "dimensionless", 0.0); //for paraview visualization
-	cell_defaults.custom_data.add_variable("pintegrin", "dimensionless", 0.5); //for paraview visualization
-	cell_defaults.custom_data.add_variable("padhesion", "dimensionless", 0.5); //for paraview visualization
-	cell_defaults.custom_data.add_variable("cell_contact", "dimensionless", 0.0); //for paraview visualization
-	cell_defaults.custom_data.add_variable("TGFbeta", "dimensionless", 0.0); //for paraview visualization
-	cell_defaults.custom_data.add_variable("node", "dimensionless", 0.0 ); //for paraview visualization
-	cell_defaults.custom_data.add_variable("adh", "dimensionless", 0.0 ); //for paraview visualization
- */
 
 	//Setting the custom_create_cell pointer to our create_custom_cell
 	// cell_defaults.functions.custom_cell_rule = Custom_cell::check_passive;
@@ -238,12 +230,11 @@ void tumor_cell_phenotype_with_signaling( Cell* pCell, Phenotype& phenotype, dou
 		//  std::cout << "setting input nodes" << "\n";
 		//pCell->phenotype.intracellular->print_current_nodes();
 		set_input_nodes(pCell);
-		//std::cout << std::endl;
+		
 		pCell->phenotype.intracellular->update();
-		//std::cout << pCell->phenotype.intracellular->get_boolean_node_value("Cell_growth");
-		//pCell->phenotype.intracellular->print_current_nodes();
-		//std::cout << std::endl;
+
 		from_nodes_to_cell(pCell, phenotype, dt);
+		//std::cout << std::endl << pCell->phenotype.intracellular->get_boolean_variable_value( "ECM_adh" ) << "        " << pCell->custom_data["integrin"];
 		color_node(pCell);
 		
 	}
@@ -350,9 +341,13 @@ void from_nodes_to_cell(Cell* pCell, Phenotype& phenotype, double dt)
 		}
 
 	if ( pCell->phenotype.intracellular->has_variable( "ECM_adh" )){
+
+		//std::cout << std::endl << pCell->phenotype.intracellular->get_boolean_variable_value( "ECM_adh" ) << "        " << pCell->custom_data["integrin"];
+
 		evolve_integrin_coef( pCell,
 			pCell->phenotype.intracellular->get_boolean_variable_value( "ECM_adh" ), dt 
-		);}
+		);
+		}
 
 	if ( pCell->phenotype.intracellular->has_variable("ECM_degrad") ){
 	 	set_mmp(pCell, pCell->phenotype.intracellular->get_boolean_variable_value("ECM_degrad") );}
@@ -417,18 +412,18 @@ void custom_cell_attach(Cell* pCell){
 
 	std::vector<Cell*> neigh = pCell->nearby_interacting_cells(); 
 
-	double integrin = pCell->custom_data["padhesion"];
+	double junction = pCell->custom_data["padhesion"];
 
 	if (neigh.size() == 0)
 		return ;
 
 	for (int i = 0; i != neigh.size(); i++){
 
-		double otherIntegrin = neigh[i]->custom_data["padhesion"];
+		double otherJunction = neigh[i]->custom_data["padhesion"];
 
 		//should I also check the distance between the cells?
 
-		if (integrin + otherIntegrin > PhysiCell::parameters.doubles("cell_junctions_attach_threshold"))
+		if (junction + otherJunction > PhysiCell::parameters.doubles("cell_junctions_attach_threshold"))
 			attach_cells( neigh[i] , pCell ); 
 
 	}
@@ -437,18 +432,18 @@ void custom_cell_attach(Cell* pCell){
 
 void custom_detach_cells(Cell* pCell){
 
-	double integrin = pCell->custom_data["padhesion"];
+	double junction = pCell->custom_data["padhesion"];
 
 	for (auto cell_attached : pCell->state.attached_cells){
 
-		double otherIntegrin = cell_attached->custom_data["padhesion"];
+		double otherJunction = cell_attached->custom_data["padhesion"];
 
-		if (integrin + otherIntegrin < PhysiCell::parameters.doubles("cell_junctions_detach_threshold"))
+		if (junction + otherJunction < PhysiCell::parameters.doubles("cell_junctions_detach_threshold"))
 			detach_cells( cell_attached , pCell );
 
 	};
 
-	if (integrin == 0.0)
+	if (junction == 0.0)
 		pCell->remove_all_attached_cells();
 
 }
@@ -472,7 +467,7 @@ double custom_adhesion_function(Cell* pCell, Cell* otherCell, double distance)
 	if ( thisadh == 0 && otadh == 1 )
 	{
 		pCell->custom_data["ecm_contact"] += distance;
-		adh = integrinStrength(otherCell);
+		//adh = integrinStrength(otherCell);
 	}
 	else
 	{
@@ -480,7 +475,7 @@ double custom_adhesion_function(Cell* pCell, Cell* otherCell, double distance)
 		if ( thisadh == 1 && otadh == 0 )
 		{
 			pCell->custom_data["ecm_contact"] += distance;
-			adh = integrinStrength(pCell);
+			//adh = integrinStrength(pCell);
 		}
 		else
 		{
@@ -595,7 +590,7 @@ void set_mmp(Cell* pCell, int activate )
 	int ecm_index = pCell->get_microenvironment()->find_density_index("ecm");
 
 	if (activate){
-		pCell->phenotype.secretion.uptake_rates[ecm_index] = PhysiCell::parameters.doubles("ecm_degradation") * pCell->custom_data["pintegrin"];
+		pCell->phenotype.secretion.uptake_rates[ecm_index] = PhysiCell::parameters.doubles("ecm_degradation") * pCell->custom_data["integrin"];
 	}
 		
 	else
@@ -680,7 +675,11 @@ void add_ecm_interaction(Cell* pC, int index_ecm, int index_voxel )
 			/* \todo change dens with a maximal density ratio ? */
 			pC->custom_data["ecm_contact"] += dens * (max_interactive_distance-distance);
 			// temp_a *= dens * ( static_cast<Cell*>(this) )->integrinStrength();
-			temp_a *= dens * integrinStrength(pC);
+
+			double temp_integrins = get_integrin_strength( pC->custom_data["integrin"] );
+
+			temp_a *= dens * temp_integrins;
+			
 			tmp_r -= temp_a;
 		}
 		
@@ -950,13 +949,6 @@ bool wait_for_cell_growth(Cell* pCell, Phenotype& phenotype, double dt){
 
 }
 
-
-/* Return value of adhesion strength with ECM according to integrin level */
-double integrinStrength(Cell* pC)
-{ 
-	return get_integrin_strength( pC->custom_data["pintegrin"] ); 
-}
-
 /* Return if level of protein given by index around the cell is high enough (compared to given threshold) */
 int feel_enough(std::string field, Cell* pCell)
 {	
@@ -1000,11 +992,12 @@ void start_SRC_mutation(bool light_on){
 
 	// FUNCTIONS TO PLOT CELLS
 
-std::vector<std::string> ECM_coloring_function( Cell* pCell )
+std::vector<std::string> ECM_coloring_function( Cell* pCell)
 {
 	std::vector< std::string > output( 4 , "black" );
-	double ecm_value = pCell->custom_data["ecm_contact"];
-	int color = (int) round( ecm_value * 255.0 / (pCell->phenotype.geometry.radius)  );
+	std::string parameter = parameters.strings("parameter_to_visualize");;
+	double param = pCell->custom_data[parameter];
+	int color = (int) round( param * 255.0 );
 	if(color > 255){
 		color = 255;
 	}
@@ -1166,9 +1159,14 @@ void SVG_plot_ecm( std::string filename , Microenvironment& M, double z_slice , 
 		auto current_voxel = M.voxels(n);
 		int z_center = current_voxel.center[2];
 		double z_displ = z_center -  dz_stroma/2;
-		//std::cout << z_center ;
-		if (z_center == z_slice){
+		
+		double z_compare = z_displ;
 
+		if (default_microenvironment_options.simulate_2D == true){
+		z_compare = z_center;
+		};
+
+		if (z_slice == z_compare){
 			int x_center = current_voxel.center[0];
 			int y_center = current_voxel.center[1];
 			

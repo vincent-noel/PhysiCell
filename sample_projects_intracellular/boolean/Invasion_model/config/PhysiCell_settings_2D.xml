@@ -248,6 +248,7 @@
 
 			<custom_data>
 				<pintegrin type="double" units="">0</pintegrin>
+				<integrin type="double" units="">0</integrin>
 				<pmotility type="double" units="">0</pmotility>
 				<padhesion type="double" units="">0</padhesion>
 				<nucleus_deform type="double" units="">0</nucleus_deform>
@@ -286,9 +287,9 @@
 		<cell_junctions_attach_threshold type="double" units="" description="change the threshold needed to attach cells in cluster with cell junction">1.1</cell_junctions_attach_threshold>
 		<cell_junctions_detach_threshold type="double" units="" description="change the threshold needed to detach cells in cluster with cell junction">0.5</cell_junctions_detach_threshold>
 		<!-- motility parameters -->
-		<migration_bias type='double' units="" description="change value of migration bias for cells with migration node active">0.96</migration_bias>
-		<migration_speed type='double' units="micron/min" description="change value of migration speed for cells with migration node active">0.5</migration_speed>
-		<persistence type="double" units="min" description="change value of persistence for cells with migration node active">3</persistence>
+		<migration_bias type='double' units="" description="change value of migration bias for cells with migration node active">0.8</migration_bias>
+		<migration_speed type='double' units="micron/min" description="change value of migration speed for cells with migration node active">0.3</migration_speed>
+		<persistence type="double" units="min" description="change value of persistence for cells with migration node active">1</persistence>
     	<motility_amplitude_min type="double" units="" description="change the min value of motility amplitude"> 0.1 </motility_amplitude_min>
     	<motility_amplitude_max type="double" units="" description="change the max value of motility amplitude"> 0.8 </motility_amplitude_max>
     	<mode_motility type="int" units="" description="not used yet"> 1 </mode_motility>
@@ -301,7 +302,8 @@
 		<TGFbeta_degradation type="double" units="" description="chenage the amount of TGFbeta degraded by the cells"> 0.002 </TGFbeta_degradation>
 		<ECM_TGFbeta_ratio type="double" units="" description="change the threshold needed to start sensing TGFbeta inside a voxel with ECM (cell must degrades a certain amount of ECM before sensing TGFbeta)">0.75</ECM_TGFbeta_ratio>
 		<!-- visualization -->
-		<node_to_visualize type="string" units="" description="change the node to visualize in the plot tab when coloring cells by custom data value">Migration</node_to_visualize> <!-- insert the name of the node you want to visualize in paraview-->
+		<parameter_to_visualize type="string" units="" description="change the parameter to visualize in the plot tab when coloring cells by custom data value">padhesion</parameter_to_visualize>
+		<node_to_visualize type="string" units="" description="change the node to visualize in the plot tab when coloring cells by custom data value">EMT</node_to_visualize> <!-- insert the name of the node you want to visualize in paraview-->
 		<color_function type="int" units="" description="change the basic color function: 0 for ECM based color, 1 for phase based color, 2 for node based color">2</color_function> 
 	</user_parameters>
 	

@@ -94,7 +94,7 @@ void setup_tissue( void );
 void setup_microenvironment( void ); 
 // custom pathology coloring function 
 std::vector<std::string> my_coloring_function( Cell* );
-std::vector<std::string> ECM_coloring_function( Cell* );
+std::vector<std::string> ECM_coloring_function( Cell*);
 std::vector<std::string> phase_coloring_function( Cell* );
 std::vector<std::string> node_coloring_function( Cell* );
 void SVG_plot_ecm( std::string filename , Microenvironment& M, double z_slice , double time, std::vector<std::string> (*cell_coloring_function)(Cell*), std::string sub );
@@ -125,7 +125,7 @@ void set_mmp( int activate );
 	
 /** \brief Change the current value of integrin percent coeff, increase or decrease according to up value */
 inline void evolve_integrin_coef(Cell* pC, int up, double dt )
-{ pC->custom_data["pintegrin"] = evolve_coef( up, pC->custom_data["pintegrin"], dt ); return ; };
+{ pC->custom_data["integrin"] = evolve_coef( up, pC->custom_data["integrin"], dt ); return ; };
 	
 /** \brief Change the current value of cell cell adhesion percent coeff, increase or decrease according to up value */
 inline void evolve_cellcell_coef(Cell* pC, int up, double dt )
@@ -137,9 +137,6 @@ inline void evolve_motility_coef(Cell* pC, int up, double dt )
 void custom_cell_attach(Cell* pCell);
 
 void custom_detach_cells(Cell* pCell);
-
-/** \brief Return value of adhesion strength with ECM according to integrin level */
-double integrinStrength(Cell* pCell);
 	
 /** \brief Get the current value of heterotypic adhesion strength */
 inline double get_heterotypic_strength( double percent )
