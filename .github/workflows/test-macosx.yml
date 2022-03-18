@@ -7,18 +7,18 @@ on:
 jobs:
   build:
 
-    runs-on: macos-latest
+    runs-on: macos-10.15
 
     steps:
     - uses: actions/checkout@v2
 
     - name: Install dependencies
-      run : brew install gcc@10
+      run : brew install gcc
 
     - name: Build Virus Macrophage project
       run: |
         make virus-macrophage-sample
-        make PHYSICELL_CPP=g++-10
+        make PHYSICELL_CPP=g++-11
         
     - name: Run Virus Macrophage cell lines project
       run: |
@@ -29,7 +29,7 @@ jobs:
         make reset
         make physiboss-cell-lines-sample
         make clean
-        make PHYSICELL_CPP=g++-10
+        make PHYSICELL_CPP=g++-11
         
     - name: Run PhysiBoSS cell lines project
       run: |
