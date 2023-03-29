@@ -72,13 +72,13 @@ class Basic_Agent
 	std::vector<double> cell_source_sink_solver_temp2;
 	std::vector<double> cell_source_sink_solver_temp_export1; 
 	std::vector<double> cell_source_sink_solver_temp_export2; 	
-	std::vector<double> previous_velocity; 
 //	bool is_active;
 	
 	std::vector<double> total_extracellular_substrate_change; 
 	
  public:
 	bool is_active;
+	std::vector<double> previous_velocity; 
 
 	std::vector<double> * secretion_rates; 
 	std::vector<double> * saturation_densities; 
