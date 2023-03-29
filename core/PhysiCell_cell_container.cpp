@@ -85,7 +85,7 @@ Cell_Container::Cell_Container()
 	boundary_condition_for_pushed_out_agents= PhysiCell_constants::default_boundary_condition_for_pushed_out_agents;
 	std::vector<Cell*> cells_ready_to_divide;
 	std::vector<Cell*> cells_ready_to_die;
-	
+	custom_mechanics_container_rule = NULL;
 	return; 
 }	
 	
@@ -222,6 +222,11 @@ void Cell_Container::update_all_cells(double t, double phenotype_dt_ , double me
 			if( pC->functions.contact_function && pC->is_out_of_domain == false )
 			{ evaluate_interactions( pC,pC->phenotype,time_since_last_mechanics ); }
 		}
+		
+		// perform global custom mechanics computations 
+
+		if (custom_mechanics_container_rule)
+		{ custom_mechanics_container_rule(time_since_last_mechanics); }
 		
 		// perform custom computations 
 
