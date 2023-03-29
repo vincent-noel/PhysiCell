@@ -109,6 +109,8 @@ class Basic_Agent
 	std::vector<double> position;  
 	std::vector<double> velocity; 
 	void update_position( double dt );
+
+	std::vector<double> old_position;  
 	
 	Basic_Agent(); 
 

@@ -66,6 +66,7 @@ Basic_Agent::Basic_Agent()
 	volume = 1.0; 
 	
 	position.assign( 3 , 0.0 ); 
+	old_position.assign( 3 , 0.0 ); 
 	velocity.assign( 3 , 0.0 );
 	previous_velocity.assign( 3 , 0.0 ); 
 	// link into the microenvironment, if one is defined 
