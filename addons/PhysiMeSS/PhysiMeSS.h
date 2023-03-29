@@ -8,6 +8,11 @@
 
 using namespace PhysiCell;
 
+bool isFibre(Cell* pCell);
+bool isFibre(Cell_Definition * cellDef);
+
+void initialize_physimess_fibre(Cell* pCell, double mLength, double mRadius);
+void initialize_physimess_cell(Cell* pCell);
 void initialize_crosslinkers(Cell* pCell);
 void initialize_crosslink_points(Cell* pCell);
 std::vector<Cell*>& get_crosslinkers(Cell*);
@@ -29,6 +34,9 @@ void deregister_fibre_voxels( Cell* pCell );
 
 std::list<int> find_agent_voxels(Cell * pCell );
 void find_agent_neighbors( Cell* pCell );
+
+void physimess_mechanics( double dt );
+void physimess_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt);
 
 
 void fibre_agent_SVG(std::ofstream& os, PhysiCell::Cell* pCell, double z_slice, std::vector<std::string> (*cell_coloring_function)(Cell*), double X_lower, double Y_lower);

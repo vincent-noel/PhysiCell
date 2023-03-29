@@ -85,7 +85,7 @@ void create_cell_types( void )
 	cell_defaults.phenotype.secretion.sync_to_microenvironment( &microenvironment ); 
 	
 	cell_defaults.functions.volume_update_function = standard_volume_update_function;
-	cell_defaults.functions.update_velocity = custom_update_cell_velocity;
+	cell_defaults.functions.update_velocity = physimess_update_cell_velocity;
 
 	cell_defaults.functions.update_migration_bias = NULL; 
 	cell_defaults.functions.update_phenotype = NULL; // update_cell_and_death_parameters_O2_based; 
@@ -188,32 +188,13 @@ void setup_tissue( void )
 
     for( int i=0; i < (*all_cells).size(); i++ ){
 
-        // initialise the following parameters for all cells regardless of type
-
-        // (*all_cells)[i]->state.crosslink_point.resize(3,0.0);
-
-        const auto agentname = std::string((*all_cells)[i]->type_name);
-        const auto ecm = std::string("ecm");
-        const auto matrix = std::string("matrix");
-        const auto fiber = std::string("fiber");
-        const auto fibre = std::string("fibre");
-        const auto rod = std::string("rod");
-
-        if (agentname.find(ecm) != std::string::npos ||
-            agentname.find(matrix) != std::string::npos ||
-            agentname.find(fiber) != std::string::npos ||
-            agentname.find(fibre) != std::string::npos ||
-            agentname.find(rod) != std::string::npos) {
+        if (isFibre((*all_cells)[i]))
+        {
             /* fibre positions are given by csv
                assign fibre orientation and test whether out of bounds */
             isFibreFromFile = true;
 
-            initialize_crosslinkers((*all_cells)[i]);
-            initialize_crosslink_points((*all_cells)[i]);
-            (*all_cells)[i]->custom_data.add_variable("mLength", NormalRandom(fibre_length, length_normdist_sd) / 2.0);
-            (*all_cells)[i]->custom_data.add_variable("mRadius", fibre_radius);
-            (*all_cells)[i]->custom_data.add_variable("X_crosslink_count", 0);
-            (*all_cells)[i]->custom_data.add_variable("fail_count", 0);
+            initialize_physimess_fibre((*all_cells)[i], NormalRandom(fibre_length, length_normdist_sd) / 2.0, fibre_radius);
             
             //assign fibre orientation as a random vector from points on unit sphere/circle
             (*all_cells)[i]->assign_orientation();
@@ -330,16 +311,11 @@ void setup_tissue( void )
                     }
                 }
             }
-
-            // relabel so that the rest of the code works (HACK)
-            (*all_cells)[i]->type_name = "fibre";
-
         }
         else
         {
             // type is a normal cell
-            (*all_cells)[i]->custom_data.add_variable("stuck_counter", 0);
-            (*all_cells)[i]->custom_data.add_variable("unstuck_counter", 0);
+            initialize_physimess_cell((*all_cells)[i]);
         }
     }
 
@@ -355,18 +331,8 @@ void setup_tissue( void )
             Cell_Definition *pCD = cell_definitions_by_index[k];
             std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
             
-            const auto agentname = std::string(pCD->name);
-            const auto ecm = std::string("ecm");
-            const auto matrix = std::string("matrix");
-            const auto fiber = std::string("fiber");
-            const auto fibre = std::string("fibre");
-            const auto rod = std::string("rod");
-
-            if (agentname.find(ecm) == std::string::npos &&
-                agentname.find(matrix) == std::string::npos &&
-                agentname.find(fiber) == std::string::npos &&
-                agentname.find(fibre) == std::string::npos &&
-                agentname.find(rod) == std::string::npos){
+            if (!isFibre(pCD))
+            {
                 for (int n = 0; n < parameters.ints("number_of_cells"); n++) {
 
                     position[0] = Xmin + UniformRandom() * Xrange;
@@ -375,22 +341,14 @@ void setup_tissue( void )
 
                     pC = create_cell(*pCD);
                     
-                    // TODO VN : Do we really need this ?
-                    initialize_crosslinkers(pC);
-                    initialize_crosslink_points(pC);
-
-                    pC->custom_data.add_variable("stuck_counter", 0);
-                    pC->custom_data.add_variable("unstuck_counter", 0);
-
+                    initialize_physimess_cell(pC);
+                    
                     pC->assign_position(position);
                 }
-            }
-
-            if (agentname.find(ecm) != std::string::npos ||
-                agentname.find(matrix) != std::string::npos ||
-                agentname.find(fiber) != std::string::npos ||
-                agentname.find(fibre) != std::string::npos ||
-                agentname.find(rod) != std::string::npos){
+            } 
+            
+            else 
+            {
                 for ( int nf = 0 ; nf < parameters.ints("number_of_fibres") ; nf++ ) {
 
                     position[0] = Xmin + UniformRandom() * Xrange;
@@ -399,13 +357,7 @@ void setup_tissue( void )
 
                     pC = create_cell(*pCD);
 
-                    initialize_crosslinkers(pC);
-                    initialize_crosslink_points(pC);
-                    
-                    pC->custom_data.add_variable("mLength", NormalRandom(fibre_length, length_normdist_sd) / 2.0);
-                    pC->custom_data.add_variable("mRadius", fibre_radius);
-                    pC->custom_data.add_variable("X_crosslink_count", 0);
-                    pC->custom_data.add_variable("fail_count", 0);
+                    initialize_physimess_fibre(pC, NormalRandom(fibre_length, length_normdist_sd) / 2.0, fibre_radius);
                     
                     //assign fibre orientation as a random vector from points on unit sphere/circle.
                     pC->assign_orientation();
@@ -497,10 +449,6 @@ void setup_tissue( void )
                     }
 
                     pC->assign_position(position);
-
-                    // relabel so that the rest of the code works (HACK)
-                    pC->type_name = "fibre";
-
                 }
             }
 
@@ -522,138 +470,6 @@ void setup_tissue( void )
     std::cout << std::endl;
 }
 
-
-void custom_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt)
-{
-    
-    // !!! PHYSIMESS CODE BLOCK START !!! //
-    double movement_threshold = 0.05;
-    if (pCell->type_name != "fibre" && phenotype.motility.is_motile) {
-		
-        if (dist(pCell->old_position, pCell->position) < movement_threshold) {
-			pCell->custom_data["stuck_counter"]++;
-        } else {
-            pCell->custom_data["stuck_counter"] = 0;
-        }
-    }
-    // !!! PHYSIMESS CODE BLOCK END !!! //
-    
-    
-	if( pCell->functions.add_cell_basement_membrane_interactions )
-	{
-		pCell->functions.add_cell_basement_membrane_interactions(pCell, phenotype,dt);
-	}
-	
-	pCell->state.simple_pressure = 0.0;
-
-    // !!! PHYSIMESS CODE BLOCK START !!! //
-    // Count crosslinks
-    pCell->custom_data["X_crosslink_count"] = 0;
-    if (pCell->type_name == "fibre" && get_crosslinkers(pCell).size()  > 0){
-        //std::cout << " fibre " << pCell->ID <<  " has " << pCell->state.crosslinkers.size()  << " cross-links " << std::endl;
-        pCell->custom_data["X_crosslink_count"] = get_crosslinkers(pCell).size();
-    }
-
-    //std::cout << " AGENT " << pCell->type_name << " " << pCell->ID << " has " ;
-    //add potentials between pCell and its neighbors
-    std::vector<Cell*>::iterator neighbor;
-    std::vector<Cell*>::iterator end = pCell->state.neighbors.end();
-    //std::cout << pCell->state.neighbors.size() << " neighbors: " ;
-    for(neighbor = pCell->state.neighbors.begin(); neighbor != end; ++neighbor) {
-        //std::cout << (*neighbor)->type_name << " " << (*neighbor)->ID << " " ;
-        
-        // if( this->ID == other_agent->ID )
-        if( pCell != *neighbor )
-        { 
-            if (pCell->type_name != "fibre" && (*neighbor)->type_name != "fibre") {
-                pCell->add_potentials(*neighbor);
-            } else if (pCell->type_name != "fibre" && (*neighbor)->type_name == "fibre") {
-                add_potentials_cell_to_fibre(pCell, *neighbor);
-            } else  if (pCell->type_name == "fibre" && (*neighbor)->type_name != "fibre") {
-                add_potentials_fibre_to_cell(pCell, *neighbor);
-            } else if (pCell->type_name == "fibre" && (*neighbor)->type_name == "fibre") {
-                add_potentials_fibre_to_fibre(pCell, *neighbor);
-            } else {
-                std::cout << " WARNING: interaction between errant cell-types has been called " << std::endl;
-                return;
-            }
-        }
-    }
-    //std::cout << std::endl;
-
-    int stuck_threshold = 10;
-    int unstuck_threshold = 1;
-
-    if (pCell->custom_data["stuck_counter"] == stuck_threshold){
-        /*std::cout << "!HELP! cell " << pCell->ID << " gets stuck at time "
-        << PhysiCell_globals.current_time << std::endl;*/
-        pCell->custom_data["stuck_counter"] = 0;
-        pCell->custom_data["unstuck_counter"] = 1;
-    }
-
-    if (1 <= pCell->custom_data["unstuck_counter"] && pCell->custom_data["unstuck_counter"] < unstuck_threshold+1) {
-        /*std::cout << " getting unstuck at time "
-        << PhysiCell_globals.current_time << std::endl;*/
-        pCell->custom_data["unstuck_counter"]++;
-        force_update_motility_vector(pCell, dt);
-        pCell->velocity += phenotype.motility.motility_vector;
-    }
-    else {
-        pCell->update_motility_vector(dt);
-        pCell->velocity += phenotype.motility.motility_vector;
-    }
-
-    if(pCell->custom_data["unstuck_counter"] == unstuck_threshold+1){
-        pCell->custom_data["unstuck_counter"] = 0;
-    }
-    // !!! PHYSIMESS CODE BLOCK END !!! //
-
-    return;
-
-}
-
-void physimess_mechanics( double dt ) 
-{    
-    #pragma omp parallel for
-    for( int i=0; i < (*all_cells).size(); i++ )
-    {
-        Cell* pC = (*all_cells)[i];
-        if( !pC->is_out_of_domain )
-        {
-            register_fibre_voxels(pC);
-        }
-    }
-
-    #pragma omp parallel for
-    for( int i=0; i < (*all_cells).size(); i++ )
-    {
-        Cell* pC = (*all_cells)[i];
-        pC->state.neighbors.clear();
-        get_crosslinkers(pC).clear();
-        if( !pC->is_out_of_domain )
-        {
-            find_agent_neighbors(pC);
-        }
-    }
-
-    #pragma omp parallel for
-    for( int i=0; i < (*all_cells).size(); i++ )
-    {
-        Cell* pC = (*all_cells)[i];
-        if( !pC->is_out_of_domain )
-        {
-            deregister_fibre_voxels(pC);
-        }
-    }
-    
-    // determine and add crosslinks
-    #pragma omp parallel for
-    for( int i=0; i < (*all_cells).size(); i++ )
-    {
-        Cell* pC = (*all_cells)[i];
-        add_crosslinks(pC);
-    }
-}
 
 std::vector<std::string> my_coloring_function( Cell* pCell )
 { return paint_by_number_cell_coloring(pCell); }
