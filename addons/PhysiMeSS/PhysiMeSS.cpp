@@ -861,39 +861,11 @@ void fibre_agent_SVG(std::ofstream& os, PhysiCell::Cell* pC, double z_slice, std
 
 	}
 	else{
-		double r = pC->phenotype.geometry.radius ; 
-		double rn = pC->phenotype.geometry.nuclear_radius ; 
-		double z = fabs( (pC->position)[2] - z_slice) ; 
-
-		std::vector<std::string> Colors = cell_coloring_function( pC ); 
-        
-		os << "   <g id=\"cell" << pC->ID << "\" " 
-		<< "type=\"" << pC->type_name << "\" "; // new April 2022  
-		if( pC->phenotype.death.dead == true )
-		{ os << "dead=\"true\" " ; } 
-		else
-		{ os << "dead=\"false\" " ; } 
-		os << ">" << std::endl; 
-		
-		// figure out how much of the cell intersects with z = 0
-		double plot_radius = sqrt( r*r - z*z );
-
-		// then normal cell, plot sphere if it intersects z = 0;
-		Write_SVG_circle( os, (pC->position)[0]-X_lower, (pC->position)[1]-Y_lower,
-							plot_radius , 0.5, Colors[1], Colors[0] );
-		// plot the nucleus if it, too intersects z = 0;
-		if( fabs(z) < rn && PhysiCell_SVG_options.plot_nuclei == true )
-		{
-			plot_radius = sqrt( rn*rn - z*z );
-			Write_SVG_circle( os, (pC->position)[0]-X_lower, (pC->position)[1]-Y_lower,
-								plot_radius, 0.5, Colors[3],Colors[2]);
-		}
-            			os << "   </g>" << std::endl;
-
+        standard_agent_SVG(os, pC, z_slice, cell_coloring_function, X_lower, Y_lower);
 	}
 }
 
-void fibre_agent_legend(std::ofstream& os, Cell_Definition* cell_definition, double& cursor_x, double& cursor_y, std::vector<std::string> (*cell_coloring_function)(Cell*), double temp_cell_radius, double padding, double font_size) {
+void fibre_agent_legend(std::ofstream& os, Cell_Definition* cell_definition, double& cursor_x, double& cursor_y, std::vector<std::string> (*cell_coloring_function)(Cell*), double temp_cell_radius) {
 	
 	// switch to the cell type 
 	Cell C; 
@@ -921,23 +893,7 @@ void fibre_agent_legend(std::ofstream& os, Cell_Definition* cell_definition, dou
 		Write_SVG_line(os, cursor_x, cursor_y-20.0 , cursor_x , cursor_y+20.0 , 4.0 , "lightskyblue" );
 	}
 	else {
-		// place a big circle with cytoplasm colors 
-		Write_SVG_circle(os,cursor_x, cursor_y , temp_cell_radius , 1.0 , colors[1] , colors[0] ); 
-		// place a small circle with nuclear colors 
-		Write_SVG_circle(os,cursor_x, cursor_y , 0.5*temp_cell_radius , 1.0 , colors[3] , colors[2] ); 
+		standard_agent_legend(os, cell_definition, cursor_x, cursor_y, cell_coloring_function, temp_cell_radius);
 	}
 	// !!! PHYSIMESS CODE BLOCK END !!! //
-	
-	// place the label
-	cursor_x += temp_cell_radius + 2*padding; 
-	cursor_y += 0.3*font_size; 
-	
-	Write_SVG_text( os , cell_definition->name.c_str() , cursor_x , cursor_y, font_size , 
-		PhysiCell_SVG_options.font_color.c_str() , PhysiCell_SVG_options.font.c_str() );
-	
-	// move the cursor down to the next row 
-	
-	cursor_y -= 0.3*font_size; 
-	cursor_y += ( 2.0 * padding + 2.0*temp_cell_radius ); 
-	cursor_x = padding + temp_cell_radius;
 }

@@ -40,6 +40,6 @@ void physimess_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double d
 
 
 void fibre_agent_SVG(std::ofstream& os, PhysiCell::Cell* pCell, double z_slice, std::vector<std::string> (*cell_coloring_function)(Cell*), double X_lower, double Y_lower);
-void fibre_agent_legend(std::ofstream& os, Cell_Definition* cell_definition, double& cursor_x, double& cursor_y, std::vector<std::string> (*cell_coloring_function)(Cell*), double temp_cell_radius, double padding, double font_size);
+void fibre_agent_legend(std::ofstream& os, Cell_Definition* cell_definition, double& cursor_x, double& cursor_y, std::vector<std::string> (*cell_coloring_function)(Cell*), double temp_cell_radius);
 
 #endif
