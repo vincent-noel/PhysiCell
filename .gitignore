@@ -21,3 +21,6 @@ user_projects/*
 !user_projects/empty.txt
 Studio.zip
 /studio
+addons/dFBA/ext/*
+addons/dFBA/test/*.o
+addons/dFBA/test/test_*
