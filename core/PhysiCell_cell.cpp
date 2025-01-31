@@ -3164,6 +3164,8 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			// If it has already be copied
 			if (pParent != NULL && pParent->phenotype.intracellular != NULL) {
 				pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
+				//((PhysiCelldFBA::dFBAIntracellular*)pParent->phenotype.intracellular)->print_model();
+				//((PhysiCelldFBA::dFBAIntracellular*)pCD->phenotype.intracellular)->print_model();
 			// Otherwise we need to create a new one
 			} else {
 				PhysiCelldFBA::dFBAIntracellular* pIntra = new PhysiCelldFBA::dFBAIntracellular(node);

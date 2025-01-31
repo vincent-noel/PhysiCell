@@ -55,7 +55,7 @@ dFBAModel::dFBAModel(const dFBAModel& copy) {
 
     // Handle ClpSimplex problem copying (depends on how `ClpSimplex` needs to be cloned)
     if (copy.is_initialized) {
-        this->problem = copy.problem;  // Modify if deep copy is needed
+        this->initProblem();
     }
 
     // Copy message handler
@@ -111,7 +111,7 @@ dFBAModel& dFBAModel::operator=(const dFBAModel& other) {
 
     // Handle ClpSimplex problem copying
     if (other.is_initialized) {
-        this->problem = other.problem; // Modify if deep copy is needed
+        this->initProblem(); 
         this->is_initialized = true;
     }
 
@@ -549,7 +549,7 @@ dFBASolution dFBAModel::optimize()
 
     }
     else{
-        std::cout << "Problem is not proven optimal: " << isOptimal << std::endl; 
+        //std::cout << "Problem is not proven optimal: " << isOptimal << std::endl; 
     }
 
     if ( isOptimal )
@@ -587,7 +587,7 @@ dFBASolution dFBAModel::optimize()
     }
     else
     {
-        std::cout << "huston... " << std::endl;
+        //std::cout << "huston... " << std::endl;
         for(dFBAReaction* reaction: this->reactions)
         { reaction->setFluxValue(0.0); }
     }

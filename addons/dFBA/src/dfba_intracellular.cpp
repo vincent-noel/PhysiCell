@@ -41,7 +41,7 @@ dFBAIntracellular::dFBAIntracellular(const dFBAIntracellular& copy) : Intracellu
     next_dfba_run = copy.next_dfba_run;
 
     // Copy sbml_model
-    sbml_model = dFBAModel(copy.sbml_model);
+    sbml_model = copy.sbml_model;
 
     // Copy substrate_exchanges (map is copied by value, which is fine here)
     substrate_exchanges = copy.substrate_exchanges;
@@ -432,8 +432,9 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
             std::cout << "**** CellID " << pCell->ID << " Substrate: " << substrate_name << " concentration: " << substrate_conc << " Total substrate: " << total_substrate << " Consumption: " << substrate_consumption << " Net export rate: " << net_export_rate << std::endl;
         }
         */
-        /*
-        std::cout << " Substrate: " << substrate_name << std::endl;
+       /*
+        std::cout << " Cell Type: " << pCell->type_name << std::endl;
+        std::cout << "\tSubstrate: " << substrate_name << std::endl;
         std::cout << "\tconcentration: " << substrate_conc << std::endl;
         std::cout << "\tKm: " << Km << std::endl;
         std::cout << "\tVmax: " << Vmax << std::endl;
@@ -443,7 +444,6 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
         std::cout << "\tFBA Flux " << flux_value << std::endl;
         std::cout << "\tFBA growth rate " << fba_growth_rate << std::endl;
         */
-        
 
         // correct scaling that takes into account the volume units (liter to um³) in BioFVM 
         net_export_rate *= 1e15; // BioFVM units are in mM  =  mmol / L whereas dV is in um³ = 1e-15 L
@@ -465,6 +465,23 @@ double dFBAIntracellular::get_flux_value(std::string reaction_name)
     dFBAReaction* exchange_flux = this->sbml_model.getReaction(reaction_name);
     double flux_value =  exchange_flux->getFluxValue(); 
     return flux_value;
+}
+
+void dFBAIntracellular::print_model(){
+    for (auto& m : this->sbml_model.getListOfMetabolites())
+    {
+        std::cout << "Metabolite: " << m->getId() << " " << m->getName() << std::endl;
+    }
+    for (auto &r : this->sbml_model.getListOfReactions())
+    {
+        std::cout << "Reaction: " << r->getId() << " " << r->getName() << " " << r->getReactionString(this->sbml_model) << std::endl;
+
+        for (auto& me : r->getMetabolites())
+        {
+            std::cout << "\tMetabolite: " << me.first << " " << me.second << std::endl;
+        }
+    }
+    // this->sbml_model.getListOfReactions();
 }
 
 void dFBAIntracellular::save_dFBA(std::string path, std::string index) 
