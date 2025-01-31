@@ -160,6 +160,7 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 
 	double get_flux_value(std::string name);
 	double get_growth_rate(){ return this->current_growth_rate; }
+	void print_model();
 
     // ================  specific to "maboss" ================
 	bool has_variable(std::string name) { return false; }
