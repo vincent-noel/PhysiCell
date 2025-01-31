@@ -88,6 +88,13 @@ void create_cell_types(void)
 	
 	setup_signal_behavior_dictionaries();
 
+	Cell_Definition* ecoli = find_cell_definition( "ecoli_1");
+	//  This sets the pre and post intracellular update functions
+	ecoli->functions.pre_update_intracellular =  NULL;
+	ecoli->functions.post_update_intracellular = post_update_intracellular;
+	ecoli->functions.update_phenotype = NULL; 
+	ecoli->functions.volume_update_function = NULL;
+
 	display_cell_definitions(std::cout);
 
 	return;
@@ -105,33 +112,48 @@ void setup_microenvironment(void)
 void setup_tissue(void)
 {
 
-	// double cell_radius = cell_defaults.phenotype.geometry.radius; 
-	// double colony_radius =  parameters.doubles("colony_radius");
+	double Xmin = microenvironment.mesh.bounding_box[0]; 
+	double Ymin = microenvironment.mesh.bounding_box[1]; 
+	double Zmin = microenvironment.mesh.bounding_box[2]; 
 
-	// std::vector<std::vector<double>> positions;
-	// if (default_microenvironment_options.simulate_2D == true)
-	// 	positions = create_cell_disc_positions(cell_radius,colony_radius); 
-	// else
-	// 	positions = create_cell_sphere_positions(cell_radius,colony_radius);
-
-	Cell* pCell = create_cell(get_cell_definition("default"));
-	std::vector<double> pos(3, 0.0);
-	pos[0] = 200.0;
-	pos[1] = 0.0;
-	pos[2] = 0.0;
-	pCell->assign_position(pos);
-
-	Cell* second_pCell = create_cell(get_cell_definition("default"));
-	pos[0] = -200.0;
-	pos[1] = 0.0;
-	pos[2] = 0.0;
-	second_pCell->assign_position(pos);
-
-	// for (int i = 0; i < positions.size(); i++)
-	// {
-	// 	pCell = create_cell(get_cell_definition("default"));
-	// 	pCell->assign_position(positions[i]);
-	// }	
+	double Xmax = microenvironment.mesh.bounding_box[3]; 
+	double Ymax = microenvironment.mesh.bounding_box[4]; 
+	double Zmax = microenvironment.mesh.bounding_box[5]; 
+	
+	if( default_microenvironment_options.simulate_2D == true )
+	{
+		Zmin = 0.0; 
+		Zmax = 0.0; 
+	}
+	
+	double Xrange = Xmax - Xmin; 
+	double Yrange = Ymax - Ymin; 
+	double Zrange = Zmax - Zmin; 
+	
+	// create some of each type of cell 
+	
+	Cell* pC;
+	
+	for( int k=0; k < cell_definitions_by_index.size() ; k++ )
+	{
+		Cell_Definition* pCD = cell_definitions_by_index[k]; 
+		std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl; 
+		for( int n = 0 ; n < parameters.ints("number_of_cells") ; n++ )
+		{
+			std::vector<double> position = {0,0,0}; 
+			position[0] = Xmin + UniformRandom()*Xrange; 
+			position[1] = Ymin + UniformRandom()*Yrange; 
+			position[2] = Zmin + UniformRandom()*Zrange; 
+			
+			pC = create_cell( *pCD ); 
+			pC->assign_position( position );
+		}
+	}
+	std::cout << std::endl; 
+	
+	// load cells from your CSV file
+	load_cells_from_pugixml();
+	
 	return; 
 }
 
@@ -141,6 +163,7 @@ void post_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phe
 	pCell->custom_data["oxygen_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_o2_e");
 	pCell->custom_data["glucose_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_glc__D_e");
 	pCell->custom_data["acetate_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_ac_e");
+	pCell->custom_data["co2_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_co2_e");
 	return;
 }
 
@@ -232,7 +255,6 @@ std::vector<std::string> my_coloring_function( Cell* pCell )
     std::string fba_flux_id = "R_EX_o2_e";
         
 	double flux_value =  pCell->phenotype.intracellular->get_flux_value(fba_flux_id);
-	std::cout << "flux_value: " << flux_value << std::endl;
 
 	if( abs(flux_value) > 0.1 )
 	{
@@ -244,12 +266,6 @@ std::vector<std::string> my_coloring_function( Cell* pCell )
 	{
 		output[0] = "green";
 		output[2] = "green";
-	}
-
-	if( pCell->phenotype.death.dead == false && pCell->type == 1 )
-	{
-		 output[0] = "black";
-		 output[2] = "black";
 	}
 
 	return output;
