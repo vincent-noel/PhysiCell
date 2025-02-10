@@ -89,7 +89,7 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 	bool need_update() { return PhysiCell::PhysiCell_globals.current_time >= this->next_dfba_run; }
 
 	// This function deals with inheritance from mother to daughter cells
-	void inherit(PhysiCell::Cell* cell){ return;};
+	void inherit(PhysiCell::Intracellular * intracellular){ return;};
 
 	// Get value for model parameter
 	double get_parameter_value(std::string name) { return 0;}

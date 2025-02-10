@@ -93,7 +93,7 @@ class RoadRunnerIntracellular : public PhysiCell::Intracellular
 		update_phenotype_parameters(phenotype);
 	}
     
-	void inherit(PhysiCell::Cell * cell) {}
+	void inherit(PhysiCell::Intracellular * intracellular) {}
 	
     int update_phenotype_parameters(PhysiCell::Phenotype& phenotype);
     int validate_PhysiCell_tokens(PhysiCell::Phenotype& phenotype);
