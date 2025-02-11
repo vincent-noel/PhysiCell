@@ -125,7 +125,7 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 		this->next_dfba_run += PhysiCell::diffusion_dt;
 
 		if (phenotype.volume.total	>= 2 * this->reference_volume ){
-			cell->divide();
+			cell->flag_for_division();
 		}
 	};
 
