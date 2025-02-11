@@ -111,6 +111,9 @@ class RoadRunnerIntracellular : public PhysiCell::Intracellular
 	void set_boolean_variable_value(std::string name, bool value)  {}
     void print_current_nodes() {}
 
+	double get_flux_value(std::string name);
+	double get_growth_rate();
+
 	static void save_libRR(std::string path, std::string index);
 };
 
