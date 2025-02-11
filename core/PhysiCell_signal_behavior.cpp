@@ -725,10 +725,8 @@ int find_signal_index( std::string signal_name )
 	auto search = signal_to_int.find( signal_name );
 	// safety first! 
 	if( search != signal_to_int.end() )
-    { return search->second; }   
-
-	std::cout << "having trouble finding " << signal_name << std::endl; 
-
+    { return search->second; }
+	
     return -1; 
 }
 
