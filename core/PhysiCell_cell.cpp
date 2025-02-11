@@ -3148,11 +3148,12 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
             {
                 // std::cout << "------ " << __FUNCTION__ << ": copying another\n";
 				pCD->phenotype.intracellulars[0]->initialize_intracellular_from_pugixml(node);
+				pCD->phenotype.intracellulars[0]->validate_PhysiCell_tokens(pCD->phenotype);
+				pCD->phenotype.intracellulars[0]->validate_SBML_species();
             }	
 			// Otherwise we need to create a new one
 			else 
             {
-                std::cout << "\n------ " << __FUNCTION__ << ": creating new RoadRunnerIntracellular\n";
 				RoadRunnerIntracellular* pIntra = new RoadRunnerIntracellular(node);
 				pIntra->validate_PhysiCell_tokens(pCD->phenotype);
                 pIntra->validate_SBML_species();
