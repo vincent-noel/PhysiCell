@@ -246,7 +246,7 @@ std::vector<std::string> my_coloring_function( Cell* pCell )
 	double flux_value =  pCell->phenotype.intracellular->get_flux_value(fba_flux_id);
 	std::cout << "flux_value: " << flux_value << std::endl;
 
-	if( abs(flux_value) > 0.1 )
+	if( abs(flux_value) >= 0.0 )
 	{
 		output[0] = "blue";
 		output[2] = "blue";
@@ -265,45 +265,4 @@ std::vector<std::string> my_coloring_function( Cell* pCell )
 	}
 
 	return output;
-}
-
-
-std::vector<std::string> metabolic_coloring_function( Cell* pCell )
-{
-	std::vector< std::string > output( 4, "black" ); 
-	
-	// if( pCell->type == 1 )
-	// { return output; } 
-	
-	// // live cells are green, but shaded by oncoprotein value 
-	// if( pCell->phenotype.death.dead == false )
-	// {
-	// 	int respiration = (int) round( (1.0/(o2_max-o2_min)) * (pCell->custom_data[oncoprotein_i]-p_min) * 255.0 ); 
-	// 	char szTempString [128];
-	// 	sprintf( szTempString , "rgb(%u,%u,%u)", oncoprotein, oncoprotein, 255-oncoprotein );
-	// 	output[0].assign( szTempString );
-	// 	output[1].assign( szTempString );
-
-	// 	sprintf( szTempString , "rgb(%u,%u,%u)", (int)round(output[0][0]/p_max) , (int)round(output[0][1]/p_max) , (int)round(output[0][2]/p_max) );
-	// 	output[2].assign( szTempString );
-		
-	// 	return output; 
-	// }
-
-	/*
-    if(value > 0.5){
-        value -= 0.5;
-        rgb[0] = 0;
-        rgb[1] = (int)((1-2*value)*255);
-        rgb[2] = (int)(2*value*255);
-    }
-    if(value <= 0.5){
-        rgb[0] = (int)((1-2*value)*255);
-        rgb[1] = (int)(2*value*255);
-        rgb[2] = 0;
-    }*/
-	
-	
-	
-	return output; 
 }

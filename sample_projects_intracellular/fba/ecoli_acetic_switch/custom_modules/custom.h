@@ -95,16 +95,6 @@ void setup_microenvironment( void );
 void pre_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt );
 void post_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt );
 
-// std::vector<double> integrate_total_substrates( void );
-
-void anuclear_volume_model (Cell* pCell, Phenotype& phenotype, double dt);
-
-void setup_default_metabolic_model( void );
-
-void update_cell(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt );
-
-void metabolic_cell_phenotype( Cell* pCell, Phenotype& phenotype, double dt );
-
 std::vector<std::string> my_coloring_function( Cell* );
 
 // helper function to create a sphere of cells of a given radius
