@@ -113,8 +113,8 @@ void create_cell_types( void )
 	   
 	   This is a good place to set custom functions. 
 	*/ 
-	cell_defaults.phenotype.intracellulars[0]->pre_update_intracellular = pre_update_intracellular; 
-	cell_defaults.phenotype.intracellulars[0]->post_update_intracellular = post_update_intracellular; 
+	PhysiCell::cell_definitions_by_name["last_one"]->phenotype.intracellulars[0]->pre_update_intracellular = pre_update_intracellular; 
+	PhysiCell::cell_definitions_by_name["last_one"]->phenotype.intracellulars[0]->post_update_intracellular = post_update_intracellular; 
 	
 	/*
 	   This builds the map of cell definitions and summarizes the setup. 
