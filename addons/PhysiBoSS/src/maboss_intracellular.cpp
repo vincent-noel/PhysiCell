@@ -423,10 +423,6 @@ void MaBoSSIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& 
 	}
 }
 
-MaBoSSIntracellular* getMaBoSSModel(PhysiCell::Phenotype& phenotype) {
-	return static_cast<MaBoSSIntracellular*>(phenotype.intracellular);
-}
-
 void MaBoSSIntracellular::display(std::ostream& os)
 {
 	os 	<< "\tintracellular model using maboss" << std::endl
