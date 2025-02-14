@@ -12,10 +12,10 @@ jobs:
     strategy:
       matrix:
         projects: [
-          {short_name: "physiboss-tutorial", project: "physiboss-tutorial", name: "PhysiBoSS tutorial", binary: "project", extra_run: "make Compile_MaBoSS PHYSICELL_CPP=g++-11"},
-          {short_name: "physiboss-tutorial-invasion", project: "physiboss-tutorial-invasion", name: "PhysiBoSS Cancer Invasion", binary: "invasion_model", extra_run: "make Compile_MaBoSS PHYSICELL_CPP=g++-11"},
-          {short_name: "physiboss-cell-lines", project: "physiboss-cell-lines-sample", name: "PhysiBoSS Cell Lines", binary: "PhysiBoSS_Cell_Lines", extra_run: "make Compile_MaBoSS PHYSICELL_CPP=g++-11"},
-          {short_name: "template_BM", project: "template_BM", name: "PhysiBoSS Template", binary: "project", extra_run: "make Compile_MaBoSS PHYSICELL_CPP=g++-11"},
+          {short_name: "physiboss-tutorial", project: "physiboss-tutorial", name: "PhysiBoSS tutorial", binary: "project", extra_run: "make Compile_MaBoSS PHYSICELL_CPP=g++-12"},
+          {short_name: "physiboss-tutorial-invasion", project: "physiboss-tutorial-invasion", name: "PhysiBoSS Cancer Invasion", binary: "invasion_model", extra_run: "make Compile_MaBoSS PHYSICELL_CPP=g++-12"},
+          {short_name: "physiboss-cell-lines", project: "physiboss-cell-lines-sample", name: "PhysiBoSS Cell Lines", binary: "PhysiBoSS_Cell_Lines", extra_run: "make Compile_MaBoSS PHYSICELL_CPP=g++-12"},
+          {short_name: "template_BM", project: "template_BM", name: "PhysiBoSS Template", binary: "project", extra_run: "make Compile_MaBoSS PHYSICELL_CPP=g++-12"},
           {short_name: "template", project: "template", name: "PhysiCell Template", binary: "project", extra_run: ""},
           {short_name: "rules", project: "rules-sample", name: "PhysiCell Rules", binary: "project", extra_run: ""},
           {short_name: "physimess", project: "physimess-sample", name: "PhysiMeSS", binary: "project", extra_run: ""},
@@ -23,7 +23,7 @@ jobs:
           {short_name: "episode", project: "episode-sample", name: "PhysiCell Episode", binary: "project", extra_run: ""},
         ]
     
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
         make ${{ matrix.projects.project }}
         make clean
         ${{ matrix.projects.extra_run }}
-        make static STATIC_OPENMP=/usr/lib/gcc/x86_64-linux-gnu/12/libgomp.a
+        make static STATIC_OPENMP=/usr/lib/gcc/x86_64-linux-gnu/12/libgomp.a PHYSICELL_CPP=g++-12
       
     - name: Checking binary for ${{ matrix.projects.name }}
       run: |
@@ -125,7 +125,7 @@ jobs:
           {short_name: "physimess", project: "physimess-sample", name: "PhysiMeSS", binary: "project", extra_run: ""},
           {short_name: "interaction", project: "interaction-sample", name: "PhysiCell Interaction", binary: "interaction_demo", extra_run: ""},
           {short_name: "episode", project: "episode-sample", name: "PhysiCell Episode", binary: "project", extra_run: ""},
-       ]
+        ]
     
     runs-on: macos-13
 
