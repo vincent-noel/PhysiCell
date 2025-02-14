@@ -122,6 +122,7 @@
 		<legacy_random_points_on_sphere_in_divide>false</legacy_random_points_on_sphere_in_divide>
 		<virtual_wall_at_domain_edge>true</virtual_wall_at_domain_edge>
         <disable_automated_spring_adhesions>false</disable_automated_spring_adhesions>
+		<random_seed>0</random_seed>
 	</options>	
 
 	<microenvironment_setup>
@@ -458,7 +459,6 @@
     </cell_rules>
 	
 	<user_parameters>
-		<random_seed type="int" units="dimensionless">0</random_seed> 
 		<!-- example parameters from the template --> 
 		
 		<div_initialization type="divider" description="---Initialization settings---"/>
