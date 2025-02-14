@@ -92,8 +92,8 @@ void setup_tissue( void );
 // set up the BioFVM microenvironment
 void setup_microenvironment( void );
 
-void pre_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt );
-void post_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt );
+void pre_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, Intracellular* intracellular, double dt );
+void post_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, Intracellular* intracellular, double dt );
 
 // std::vector<double> integrate_total_substrates( void );
 

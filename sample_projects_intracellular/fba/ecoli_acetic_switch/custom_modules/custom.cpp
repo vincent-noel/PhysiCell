@@ -79,8 +79,8 @@ void create_cell_types(void)
 	initialize_cell_definitions_from_pugixml();
 
 	//  This sets the pre and post intracellular update functions
-	cell_defaults.functions.pre_update_intracellular =  NULL;
-	cell_defaults.functions.post_update_intracellular = post_update_intracellular;
+	cell_defaults.phenotype.intracellulars[0]->pre_update_intracellular =  NULL;
+	cell_defaults.phenotype.intracellulars[0]->post_update_intracellular = post_update_intracellular;
 	cell_defaults.functions.update_phenotype = NULL; 
 	cell_defaults.functions.volume_update_function = NULL;
 
@@ -90,8 +90,8 @@ void create_cell_types(void)
 
 	Cell_Definition* ecoli = find_cell_definition( "ecoli_1");
 	//  This sets the pre and post intracellular update functions
-	ecoli->functions.pre_update_intracellular =  NULL;
-	ecoli->functions.post_update_intracellular = post_update_intracellular;
+	ecoli->phenotype.intracellulars[0]->pre_update_intracellular =  NULL;
+	ecoli->phenotype.intracellulars[0]->post_update_intracellular = post_update_intracellular;
 	ecoli->functions.update_phenotype = NULL; 
 	ecoli->functions.volume_update_function = NULL;
 
@@ -157,13 +157,13 @@ void setup_tissue(void)
 	return; 
 }
 
-void post_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt ){
-	pCell->custom_data["growth_rate"] = pCell->phenotype.intracellular->get_growth_rate();
+void post_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, Intracellular* intracellular, double dt ){
+	pCell->custom_data["growth_rate"] = intracellular->get_growth_rate();
 
-	pCell->custom_data["oxygen_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_o2_e");
-	pCell->custom_data["glucose_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_glc__D_e");
-	pCell->custom_data["acetate_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_ac_e");
-	pCell->custom_data["co2_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_co2_e");
+	pCell->custom_data["oxygen_flux"] = intracellular->get_flux_value("R_EX_o2_e");
+	pCell->custom_data["glucose_flux"] = intracellular->get_flux_value("R_EX_glc__D_e");
+	pCell->custom_data["acetate_flux"] = intracellular->get_flux_value("R_EX_ac_e");
+	pCell->custom_data["co2_flux"] = intracellular->get_flux_value("R_EX_co2_e");
 	return;
 }
 
@@ -254,7 +254,7 @@ std::vector<std::string> my_coloring_function( Cell* pCell )
 
     std::string fba_flux_id = "R_EX_o2_e";
         
-	double flux_value =  pCell->phenotype.intracellular->get_flux_value(fba_flux_id);
+	double flux_value =  pCell->phenotype.intracellulars[0]->get_flux_value(fba_flux_id);
 
 	if( abs(flux_value) > 0.1 )
 	{
