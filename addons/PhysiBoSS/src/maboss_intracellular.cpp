@@ -23,6 +23,8 @@ MaBoSSIntracellular::MaBoSSIntracellular(pugi::xml_node& node)
 
 MaBoSSIntracellular::MaBoSSIntracellular(MaBoSSIntracellular* copy) 
 {
+	pre_update_intracellular = copy->pre_update_intracellular;
+	post_update_intracellular = copy->post_update_intracellular;
 	intracellular_type = copy->intracellular_type;
 	bnd_filename = copy->bnd_filename;
 	cfg_filename = copy->cfg_filename;
