@@ -36,6 +36,7 @@ jobs:
           {project: "asymmetric-division-sample", name: "PhysiCell asymmetric division", binary: "project", config: "config/PhysiCell_settings.xml", max_time: 120, output_folder: ""},
           {project: "episode-sample", name: "PhysiCell Episode", binary: "project", max_time: 120, config: "config/PhysiCell_settings.xml", output_folder: ""},
           {project: "ecoli-acetic-switch-sample", name: "PhysiCell Ecoli Acetic Switch", binary: "ecoli-dfba", config: "config/Ecoli_static_ox_glc.xml", max_time: 20, output_folder: ""},
+          {project: "hybrid_intracellular", name: "PhysiCell Boolean/Metabolic model", binary: "project", config: "config/PhysiCell_settings.xml", max_time: 20, output_folder: ""},
         ]
         
     name: Testing ${{ matrix.projects.name }} on ${{ matrix.os.name }}
