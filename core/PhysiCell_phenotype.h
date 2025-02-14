@@ -503,9 +503,6 @@ class Cell_Functions
 	void (*custom_cell_rule)( Cell* pCell, Phenotype& phenotype, double dt ); 
 	void (*update_phenotype)( Cell* pCell, Phenotype& phenotype, double dt ); // used in celll
 	
-	void (*pre_update_intracellular) ( Cell* pCell, Phenotype& phenotype, double dt );
-	void (*post_update_intracellular) ( Cell* pCell, Phenotype& phenotype, double dt );
-
 	void (*update_velocity)( Cell* pCell, Phenotype& phenotype, double dt ); 
 	
 	void (*add_cell_basement_membrane_interactions)(Cell* pCell, Phenotype& phenotype, double dt );
@@ -621,8 +618,8 @@ class Intracellular
     std::string intracellular_type;  // specified in XML <intracellular type="...">:  "maboss", "sbml", ...
 	// bool enabled; 
 
-	void (*pre_update_intracellular) ( Cell* pCell, Phenotype& phenotype, double dt );
-	void (*post_update_intracellular) ( Cell* pCell, Phenotype& phenotype, double dt );
+	void (*pre_update_intracellular) ( Cell* pCell, Phenotype& phenotype, Intracellular* intracellular, double dt );
+	void (*post_update_intracellular) ( Cell* pCell, Phenotype& phenotype, Intracellular* intracellular, double dt );
 
     // ==========  specific to SBML ==============
     // std::string sbml_filename;
