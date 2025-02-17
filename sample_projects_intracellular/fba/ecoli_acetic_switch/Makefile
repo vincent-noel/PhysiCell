@@ -13,7 +13,7 @@ CUR_DIR = $(shell pwd)
 EXT_DIR = $(CUR_DIR)/addons/dFBA/ext
 
 
-LIB := -L$(EXT_DIR)/libsbml/lib -L$(EXT_DIR)/coin-or/lib/ -lClp -lCoinUtils -llapack -lsbml-static -lxml2 -lbz2 -lz -ggdb
+LIB := -L$(EXT_DIR)/libsbml/lib  $(EXT_DIR)/coin-or/lib/libClp.a $(EXT_DIR)/coin-or/lib/libCoinUtils.a -lsbml-static -lxml2 -lbz2 -lz -ggdb -llapack
 INC := -DADDON_PHYSIDFBA -I$(EXT_DIR)/libsbml/include -I$(EXT_DIR)/coin-or/include -I$(CUR_DIR)/addons/dFBA/src
 
 
@@ -73,6 +73,8 @@ PhysiCell_pugixml.o PhysiCell_settings.o PhysiCell_geometry.o
 
 # put your custom objects here (they should be in the custom_modules directory)
 
+libFBA := ./addons/dFBA/ext/coin-or/include/coin/CoinPackedMatrix.hpp
+
 PhysiCelldFBA_OBJECTS := dfba_Metabolite.o dfba_Reaction.o dfba_Solution.o dfba_Model.o dfba_intracellular.o
 
 PhysiCell_custom_module_OBJECTS := custom.o
@@ -88,7 +90,7 @@ SOME_OBJECTS := dfba_Metabolite.o dfba_Reaction.o dfba_Solution.o dfba_Model.o
 
 # all: libFBA main.cpp $(ALL_OBJECTS)
 
-all: libFBA main.cpp $(ALL_OBJECTS)
+all: main.cpp $(ALL_OBJECTS) $(libFBA)
 	$(COMPILE_COMMAND) $(INC) -o $(PROGRAM_NAME) $(ALL_OBJECTS) main.cpp $(LIB)
 	make name
 
@@ -105,7 +107,7 @@ PhysiCell_phenotype.o: ./core/PhysiCell_phenotype.cpp
 PhysiCell_digital_cell_line.o: ./core/PhysiCell_digital_cell_line.cpp
 	$(COMPILE_COMMAND) -c ./core/PhysiCell_digital_cell_line.cpp
 
-PhysiCell_cell.o: ./core/PhysiCell_cell.cpp $(MaBoSS)
+PhysiCell_cell.o: ./core/PhysiCell_cell.cpp $(libFBA)
 	$(COMPILE_COMMAND) $(INC) -c ./core/PhysiCell_cell.cpp 
 
 PhysiCell_cell_container.o: ./core/PhysiCell_cell_container.cpp
@@ -190,24 +192,23 @@ PhysiCell_geometry.o: ./modules/PhysiCell_geometry.cpp
 # user-defined PhysiCell modules
 
 # PhysiFBA addon modules
-libFBA: 
-	python3 beta/setup_fba.py 
+$(libFBA): 
 	python3 beta/setup_fba.py
 	
-dfba_intracellular.o: addons/dFBA/src/dfba_intracellular.cpp
-	$(COMPILE_COMMAND) $(INC) $(LIB) -c addons/dFBA/src/dfba_intracellular.cpp
+dfba_intracellular.o: addons/dFBA/src/dfba_intracellular.cpp $(libFBA)
+	$(COMPILE_COMMAND) $(INC) -c addons/dFBA/src/dfba_intracellular.cpp
 
-dfba_Model.o: addons/dFBA/src/dfba_Model.cpp
-	$(COMPILE_COMMAND) $(INC) $(LIB) -c addons/dFBA/src/dfba_Model.cpp
+dfba_Model.o: addons/dFBA/src/dfba_Model.cpp $(libFBA)
+	$(COMPILE_COMMAND) $(INC) -c addons/dFBA/src/dfba_Model.cpp
 
-dfba_Reaction.o: addons/dFBA/src/dfba_Reaction.cpp
-	$(COMPILE_COMMAND) $(INC) $(LIB) -c addons/dFBA/src/dfba_Reaction.cpp
+dfba_Reaction.o: addons/dFBA/src/dfba_Reaction.cpp $(libFBA)
+	$(COMPILE_COMMAND) $(INC) -c addons/dFBA/src/dfba_Reaction.cpp
 
-dfba_Metabolite.o: addons/dFBA/src/dfba_Metabolite.cpp
-	$(COMPILE_COMMAND) $(INC) $(LIB) -c addons/dFBA/src/dfba_Metabolite.cpp
+dfba_Metabolite.o: addons/dFBA/src/dfba_Metabolite.cpp $(libFBA)
+	$(COMPILE_COMMAND) $(INC) -c addons/dFBA/src/dfba_Metabolite.cpp
 
-dfba_Solution.o: addons/dFBA/src/dfba_Solution.cpp
-	$(COMPILE_COMMAND) $(INC) $(LIB) -c addons/dFBA/src/dfba_Solution.cpp 
+dfba_Solution.o: addons/dFBA/src/dfba_Solution.cpp $(libFBA)
+	$(COMPILE_COMMAND) $(INC) -c addons/dFBA/src/dfba_Solution.cpp 
 
 # user-defined PhysiCell modules
 custom.o: ./custom_modules/custom.cpp
