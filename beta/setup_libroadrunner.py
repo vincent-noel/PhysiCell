@@ -6,6 +6,7 @@
 
 import platform
 import urllib.request
+import urllib.error
 import os
 import sys
 import tarfile
@@ -29,12 +30,8 @@ def reminder_dynamic_link_path_linux():
 
 os_type = platform.system()
 
-# Old:
-# if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), "addons", "libRoadrunner", "roadrunner")):
-
-# New: July 2023 - trying to be smarter about deciding whether to (re)download libRR
 #  NOTE: needs to be tested cross-platform!
-if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), "addons", "libRoadrunner", "roadrunner","include","rr","C","rrc_api.h")):
+if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), "addons", "libRoadrunner", "roadrunner","include","rr","rrc_api.h")):
     print('\nlibroadrunner already installed.\n')
 
     # regardless, let's remind the user about the env var requirement!
@@ -51,45 +48,31 @@ else:
     rr_file = ""
     url = ""
 
-    mac_silicon = False
     if os_type.lower() == 'darwin':
         reminder_dynamic_link_path_macos()
         if "ARM64" in platform.uname().version:
-            # pass
-            # print('... for the arm64 processor.')
-            # url = "https://github.com/PhysiCell-Tools/intracellular_libs/raw/main/ode/libs/macos12_arm64/libroadrunner_c_api.dylib"
-            rr_file = "roadrunner_macos_arm64.tar.gz"
-            url = "https://github.com/PhysiCell-Tools/intracellular_libs/raw/main/ode/roadrunner_macos_arm64.tar.gz"
-            mac_silicon = True
+            rr_file = "roadrunner_macos_arm64.zip"
+            url = "https://github.com/PhysiCell-Tools/intracellular_libs/raw/main/ode/" + rr_file
         else:
-            rr_file = "roadrunner-osx-10.9-cp36m.tar.gz"
-            url = "https://sourceforge.net/projects/libroadrunner/files/libroadrunner-1.4.18/" + rr_file + "/download"
+            rr_file = "roadrunner_macos_x86_64.zip"
+            url = "https://github.com/PhysiCell-Tools/intracellular_libs/raw/main/ode/" + rr_file
     elif os_type.lower().startswith("win"):
-        rr_file = "roadrunner-win64-vs14-cp35m.zip"
-        url = "https://sourceforge.net/projects/libroadrunner/files/libroadrunner-1.4.18/" + rr_file + "/download"
+        rr_file = "roadrunner_win_x86_64.zip"
+        url = "https://github.com/PhysiCell-Tools/intracellular_libs/raw/main/ode/" + rr_file
     elif os_type.lower().startswith("linux"):
         reminder_dynamic_link_path_linux()
-        rr_file = "cpplibroadrunner-1.3.0-linux_x86_64.tar.gz"
-        url = "https://sourceforge.net/projects/libroadrunner/files/libroadrunner-1.3/" + rr_file + "/download"
+        rr_file = "roadrunner_ubuntu_24.zip"
+        url = "https://github.com/PhysiCell-Tools/intracellular_libs/raw/main/ode/" + rr_file
     else:
         print("Your operating system seems to be unsupported. Please submit a ticket at https://sourceforge.net/p/physicell/tickets/ ")
         sys.exit(1)
 
-    print("url=",url)
-    if mac_silicon:
-        fname = url.split('/')[-1]
-    else:
-        fname = url.split('/')[-2]
+    fname = url.split('/')[-1]
     print("fname=",fname)
 
-    # home = os.path.expanduser("~")
     print('libRoadRunner will now be installed into this location:')
-    # dir_name = os.path.join(home, 'libroadrunner')
     dir_name = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'addons', 'libRoadrunner')
     print(dir_name + '\n')
-    # print('   - Press ENTER to confirm the location')
-    # print('   - Press CTL-C to abort the installation')
-    # print('   - Or specify a different location below\n')
     prompt_str = '[' + dir_name + '] >>> '
     try:
         # response = input(prompt_str)
@@ -116,21 +99,16 @@ else:
         exit(1)
 
     print('Beginning download of libroadrunner into ' + dir_name + ' ...')
-    print(url)
+    print("url=" ,url)
 
     my_file = os.path.join(dir_name, fname)
     print('my_file = ',my_file)
 
-    if os_type.lower().startswith("win"):
-        rrlib_dir = my_file[:-4]
-    else:  # darwin or linux
-        if mac_silicon:
-            # idx_end = my_file.rindex('/')
-            # rrlib_dir = my_file[:idx_end]
-            rrlib_dir = my_file[:-7]
-            # rrlib_dir = my_file
-        else:
-            rrlib_dir = my_file[:-7]
+    rrlib_dir = my_file[:-4]
+    # if os_type.lower().startswith("win"):
+    #     rrlib_dir = my_file[:-4]
+    # else:  # darwin or linux
+    #     rrlib_dir = my_file[:-4]
     print('rrlib_dir = ',rrlib_dir)
 
     def download_cb(blocknum, blocksize, totalsize):
@@ -154,38 +132,16 @@ else:
         try:
             with zipfile.ZipFile(rr_file) as zf:
                 zf.extractall('.')
-            os.rename("roadrunner-win64-vs14-cp35m", new_dir_name)
         except:
             print('error unzipping the file')
             exit(1)
     else:  # Darwin or Linux
         try:
-            print("untarring ",rr_file)
-            tar = tarfile.open(rr_file)
-            tar.extractall()
-            tar.close()
-            if 'darwin' in os_type.lower():
-                if mac_silicon:
-                    os.rename("roadrunner_macos_arm64", new_dir_name)
-                else:
-                    os.rename("roadrunner-osx-10.9-cp36m", new_dir_name)
-            else:
-                os.rename("libroadrunner", new_dir_name)
+            print(f'unzipping (uncompressing) {rr_file}')
+            with zipfile.ZipFile(rr_file) as zf:
+                zf.extractall('.')
         except:
-            if mac_silicon:
-                print()
-                # pass
-            else:
-                print('error untarring the file')
-                exit(1)
+            print('error unzipping the file')
+            exit(1)
 
     print('Done.\n')
-
-    # # LIBRR_DIR := /Users/heiland/libroadrunner/roadrunner-osx-10.9-cp36m
-    # print("Replace the following variables in your PhysiCell Makefile with these:\n")
-    # #print("LIBRR_DIR := /Users/heiland/libroadrunner/roadrunner-osx-10.9-cp36m")
-    # print("LIBRR_DIR := " + rrlib_dir)
-    # if os_type == 'Windows':
-    #     print("LIBRR_LIBS := " + rrlib_dir + "/bin\n")
-    # else:
-    #     print("LIBRR_LIBS := " + rrlib_dir + "/lib\n")

@@ -17,12 +17,8 @@ OSFLAG 	:=
 ifeq ($(OS),Windows_NT)
 	OSFLAG += -D WIN32
 	OMP_LIB := 
-#	LIBRR_DIR := C:\Users\heiland\libroadrunner\roadrunner-win64-vs14-cp35m
-#	LIBRR_LIBS := C:\Users\heiland\libroadrunner\roadrunner-win64-vs14-cp35m/bin
-#	LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
-#	CFLAGS := -march=$(ARCH) -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D ADDON_ROADRUNNER 
 	LIBRR_DIR := .\addons\libRoadrunner\roadrunner
-	LIBRR_CFLAGS := -I${LIBRR_DIR}\include\rr\C
+	LIBRR_CFLAGS := -I${LIBRR_DIR}\include\rr
 	LIBRR_LIBS := ${LIBRR_DIR}\lib
 	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
 		OSFLAG += -D AMD64
@@ -31,37 +27,23 @@ ifeq ($(OS),Windows_NT)
 		OSFLAG += -D IA32
 	endif
 else
+#	@echo remember 
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
 		OSFLAG += -D LINUX
 		OMP_LIB :=
 #		LIBRR_DIR := $(shell pwd)/intracellular_libs/roadrunner
 		LIBRR_DIR := ./addons/libRoadrunner/roadrunner
-		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
+		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr
 		LIBRR_LIBS := ${LIBRR_DIR}/lib
 	endif
 	ifeq ($(UNAME_S),Darwin)
+#		@echo remember 
 		OSFLAG += -D OSX
 		LIBRR_DIR := ./addons/libRoadrunner/roadrunner
-		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
+		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr
 		LIBRR_LIBS := ${LIBRR_DIR}/lib
 	endif
-
-#	 Not sure if useful later or not.
-#	UNAME_P := $(shell uname -p)
-#	ifeq ($(UNAME_P),x86_64)
-#		OSFLAG += -D AMD64
-#		LIBRR_DIR := $(shell pwd)/intracellular_libs/roadrunner
-#		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
-#		# CFLAGS := -march=$(ARCH) -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D LIBROADRUNNER 
-#		CFLAGS := -march=$(ARCH) -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D ADDON_ROADRUNNER 
-#	endif
-#	ifneq ($(filter %86,$(UNAME_P)),)
-#		OSFLAG += -D IA32
-#	endif
-#	ifneq ($(filter arm%,$(UNAME_P)),)
-#		OSFLAG += -D ARM
-#	endif
 endif
 
 COMPILE_COMMAND := $(CC) $(CFLAGS) $(LIBRR_CFLAGS) 
@@ -99,6 +81,8 @@ all: libRoadrunner main.cpp $(ALL_OBJECTS)
 	$(COMPILE_COMMAND) $(OMP_LIB) -o $(PROGRAM_NAME) $(ALL_OBJECTS) main.cpp -L$(LIBRR_LIBS) -lroadrunner_c_api
 	@echo
 	@echo created $(PROGRAM_NAME)
+	@echo 'remember on Mac: export DYLD_LIBRARY_PATH=$$DYLD_LIBRARY_PATH:./addons/libRoadrunner/roadrunner/lib'
+	@echo 'remember on Linux: export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:./addons/libRoadrunner/roadrunner/lib'
 	@echo
 
 name:
