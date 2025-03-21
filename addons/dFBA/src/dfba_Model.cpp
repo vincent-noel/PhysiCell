@@ -588,6 +588,17 @@ dFBASolution dFBAModel::optimize()
     else
     {
         //std::cout << "huston... " << std::endl;
+        std::string status;
+        if (this->problem.status() == 0){
+            status = "optimal";
+        }
+        else if (this->problem.status() == 1){
+            status = "infeasible";
+        }
+        else{
+            status = "unknown";
+        }
+        solution.status = status;
         for(dFBAReaction* reaction: this->reactions)
         { reaction->setFluxValue(0.0); }
     }

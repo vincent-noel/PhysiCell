@@ -15,6 +15,7 @@
 #include "../../../core/PhysiCell_phenotype.h"
 #include "../../../core/PhysiCell_cell.h"
 #include "../../../modules/PhysiCell_pugixml.h"
+#include "../../../core/PhysiCell_constants.h"
 
 #include "dfba_Model.h"
 
@@ -52,11 +53,16 @@ class dFBAIntracellular : public PhysiCell::Intracellular
  	std::string sbml_filename;
 	std::string objective_reaction;
 	double reference_volume = 2494;
-	double cell_density = 1.04;
+	double cell_density = 0.0;
 	double max_growth_rate = 0;
 	double current_growth_rate = 0;
 	double next_dfba_run = 0;
-
+	bool use_metabolic_death = true;
+	std::string death_type;
+	std::string death_trigger_flux;
+	double death_flux_threshold = 0.0;
+	double death_rate_increase = 0.0;
+	bool flag_for_death = false;
 	dFBAModel sbml_model;
 	bool is_initialized = false;
 
@@ -109,23 +115,30 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 		 // STEP 1. 
 		// date exchange fluxes lower bound using concentration values of the 
 		// corresponding densities at the agent voxel
-		this->update_dfba_inputs(cell, phenotype, dt);
+		if (cell->phenotype.death.dead == false)
+		{ 
+			this->update_dfba_inputs(cell, phenotype, dt);
 
-		// STEP 2. 
-		// Run FBA and retrive the solution
-		// dFBASolution solution = this->model.optimize();
-		// this->current_growth_rate = solution.getObjectiveValue();
-		this->update();		
+			// STEP 2. 
+			// Run FBA and retrive the solution
+			// dFBASolution solution = this->model.optimize();
+			// this->current_growth_rate = solution.getObjectiveValue();
+			this->update();		
 
-		// STEP 3. Update the cell volumne using the growth rate from FBA
-		// STEP 4. rescale exchange fluxes from the dfba model and use them to update the net_export_rates
-		// STEP 5. remove the internalized substrates if needed
-		this->update_dfba_outputs(cell, phenotype, dt);
+			// STEP 3. Update the cell volumne using the growth rate from FBA
+			// STEP 4. rescale exchange fluxes from the dfba model and use them to update the net_export_rates
+			// STEP 5. remove the internalized substrates if needed
+			this->update_dfba_outputs(cell, phenotype, dt);
 
-		this->next_dfba_run += PhysiCell::diffusion_dt;
+			this->next_dfba_run += PhysiCell::diffusion_dt;
 
-		if (phenotype.volume.total	>= 2 * this->reference_volume ){
-			cell->flag_for_division();
+			if (phenotype.volume.total	>= 2 * this->reference_volume ){
+				cell->flag_for_division();
+			}
+		}
+		else
+		{
+			return ;
 		}
 	};
 
@@ -137,6 +150,7 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 	
 	int parse_transport_model(pugi::xml_node& node);
 	void parse_growth_model(pugi::xml_node& node);
+	void parse_death_model(pugi::xml_node& node);
 	void initLpSolver();
 
 

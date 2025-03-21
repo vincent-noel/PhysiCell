@@ -17,6 +17,12 @@ dFBAIntracellular::dFBAIntracellular() : Intracellular()
     max_growth_rate = 0.0;
     current_growth_rate = 0.0;
     next_dfba_run = 0.0;
+    use_metabolic_death = true;
+	death_type = "";
+	death_trigger_flux = "";
+	death_flux_threshold = 0.0;
+	death_rate_increase = 0.0;
+	flag_for_death = false;
 }
 
 dFBAIntracellular::dFBAIntracellular(pugi::xml_node& node)
@@ -28,6 +34,12 @@ dFBAIntracellular::dFBAIntracellular(pugi::xml_node& node)
     max_growth_rate = 0.0;
     current_growth_rate = 0.0;
     next_dfba_run = 0.0;
+    use_metabolic_death = true;
+	death_type = "";
+	death_trigger_flux = "";
+	death_flux_threshold = 0.0;
+	death_rate_increase = 0.0;
+	flag_for_death = false;
 	this->initialize_intracellular_from_pugixml(node);
 }
 
@@ -48,6 +60,12 @@ dFBAIntracellular::dFBAIntracellular(const dFBAIntracellular& copy) : Intracellu
 
     // Copy the initialization flag
     is_initialized = copy.is_initialized;
+    use_metabolic_death = copy.use_metabolic_death;
+	death_type = copy.death_type;
+	death_trigger_flux = copy.death_trigger_flux;
+	death_flux_threshold = copy.death_flux_threshold;
+	death_rate_increase = copy.death_rate_increase;
+	flag_for_death = copy.flag_for_death;
 }
 
 
@@ -178,6 +196,53 @@ void dFBAIntracellular::parse_growth_model(pugi::xml_node& parent)
     
 }
 
+void dFBAIntracellular::parse_death_model(pugi::xml_node& parent){
+
+
+    // If death_model is specified, parse its parameters
+    this->use_metabolic_death = true;
+
+    // Parse death_type (apoptosis or necrosis)
+    pugi::xml_node node = parent.child("death_type");
+    if (node){
+        this->death_type = PhysiCell::xml_get_my_string_value(node);
+        assert(this->death_type == "apoptosis" || this->death_type == "necrosis");
+    } else {
+        std::cout << "Warning: death_type not specified. Defaulting to apoptosis." << std::endl;
+        this->death_type = "apoptosis";
+    }
+
+    // Parse monitored_flux (optional)
+    node = parent.child("death_trigger_flux");
+    if (node){
+        this->death_trigger_flux = PhysiCell::xml_get_my_string_value(node);
+    } else {
+        std::cout << "Warning: monitored_flux not specified. Metabolic-dependent death disabled." << std::endl;
+        this->death_trigger_flux = "";
+        return;
+    }
+
+    // Parse flux_threshold (optional, default provided)
+    node = parent.child("death_flux_threshold");
+    if (node){
+        this->death_flux_threshold = PhysiCell::xml_get_my_double_value(node);
+    } else {
+        std::cout << "Warning: flux_threshold not specified. Using default 1e-6." << std::endl;
+        this->death_flux_threshold = 1e-6;
+    }
+
+    // Parse death_rate (optional, default provided)
+    node = parent.child("death_rate_increase");
+    if (node){
+        this->death_rate_increase = PhysiCell::xml_get_my_double_value(node);
+    } else {
+        std::cout << "Warning: death_rate not specified. Using default 0.01." << std::endl;
+        this->death_rate_increase = 0.01;
+    }
+
+    std::cout << "Metabolic-dependent death enabled: " << this->death_type << ", monitored flux: " << this->death_trigger_flux << ", threshold: " << this->death_flux_threshold << ", rate: " << this->death_rate_increase << std::endl;
+}
+
 void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& node)
 {
     std::cout << "===================================================" << std::endl;
@@ -232,6 +297,18 @@ void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& no
         exit(-1); 
     }
 
+    // parsing the transport model
+    pugi::xml_node node_death_model = node.child( "death_model" ); 
+    if ( node_death_model )
+	{ 
+        parse_death_model(node_death_model);
+    }
+    else
+    {
+        std::cout << "Death model not specified. Using default behavior (no metabolic-dependent death)." << std::endl;
+        this->use_metabolic_death = false;
+    }
+
 
     std::cout << "Loading SBML model from: " << this->sbml_filename << std::endl;
     this->sbml_model.initModel(this->sbml_filename.c_str());
@@ -247,6 +324,17 @@ void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& no
         assert( rxn != nullptr );
     }
     this->sbml_model.setReactionUpperBound(this->objective_reaction, this->max_growth_rate);
+
+    if(this->use_metabolic_death && !this->death_trigger_flux.empty()){
+        dFBAReaction* death_rxn = this->sbml_model.getReaction(this->death_trigger_flux);
+        if(death_rxn == nullptr){
+            std::cout << "ERROR: Specified death_trigger_flux (" << this->death_trigger_flux << ") does not exist in the SBML model." << std::endl;
+            exit(-1);
+        }
+        else{
+            this->sbml_model.setReactionLowerBound(this->death_trigger_flux, this->death_flux_threshold);
+        }
+    }
 
     std::cout << "Done!" << std::endl;
     std::cout << "===================================================" << std::endl;
@@ -346,7 +434,6 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
 
         // Change sign to use as lower bound of the exchange flux
         double exchange_flux_lb = -1 * uptake_rate;
-        //std::cout << "Substrate: " << substrate_name << " concentration: " << substrate_conc << " Vmax: " << Vmax << " Km: " << Km << " Max rate: " << max_rate << " Exchange flux lb: " << exchange_flux_lb << std::endl;
         // Updateing the lower bound of the corresponding exchange flux
         this->sbml_model.setReactionLowerBound(ex_strut.fba_flux_id, exchange_flux_lb);
     }
@@ -354,24 +441,53 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
 
 void dFBAIntracellular::update(){
     dFBASolution solution = this->sbml_model.optimize();
+
     if (solution.status == "infeasible"){
-        std::cout << "I'm dead from the metabolic point of view" << std::endl;
-        this->current_growth_rate = -1;
-    }else if(solution.status == "unknown"){
+        //std::cout << "I'm dead from the metabolic point of view" << std::endl;
+        this->flag_for_death = true;
+    }
+    else if(solution.status == "unknown"){
         std::cout << "ERROR: Unknown status for the FBA problem!" << std::endl;
         exit(1);
-    }else{
-        this->current_growth_rate = solution.getObjectiveValue();
     }
-
+    else{
+        this->current_growth_rate = solution.getObjectiveValue();
+        this->flag_for_death = false;
+    }
 }
 
 void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt )
 {
-    // STEP 3 - Update cell volumen using growth rate (first rscale growth rate to 1/min)
+    // Metabolic-dependent death check
+    //std::cout << "Cell ready to die? --> " << this->flag_for_death << std::endl;
+    //std::cout << "Death parameters: " << this->use_metabolic_death << " " << this->death_trigger_flux << " " << this->death_flux_threshold << " " << this->death_rate_increase << std::endl;
+    static int nApoptosis = phenotype.death.find_death_model_index(PhysiCell::PhysiCell_constants::apoptosis_death_model );
+    static int nNecrosis = phenotype.death.find_death_model_index(PhysiCell::PhysiCell_constants::necrosis_death_model );
 
-    
-    float fba_growth_rate = this->current_growth_rate;
+    if(this->flag_for_death && this->use_metabolic_death)
+    {
+        if(this->death_type == "apoptosis")
+        {
+            pCell->phenotype.death.rates[nApoptosis] += this->death_rate_increase;
+        }
+        else if(this->death_type == "necrosis")
+        {
+            pCell->phenotype.death.rates[nNecrosis] += this->death_rate_increase;
+        }
+    } 
+    else if(this->use_metabolic_death && !this->flag_for_death)
+    {
+        if(this->death_type == "apoptosis")
+        {
+            pCell->phenotype.death.rates[nApoptosis] = 0.0;
+        }
+        else if(this->death_type == "necrosis")
+        {
+            pCell->phenotype.death.rates[nNecrosis] = 0.0;
+        }
+    }
+
+    double fba_growth_rate = this->current_growth_rate;
     //std::cout << "Cell ID : " << pCell->ID << std::endl;
 
     //std::cout << "Current growth rate: " << this->current_growth_rate << std::endl;
