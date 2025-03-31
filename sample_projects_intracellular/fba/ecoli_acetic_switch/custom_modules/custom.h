@@ -95,6 +95,8 @@ void setup_microenvironment( void );
 void pre_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt );
 void post_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt );
 
+void reintroduce_nutrients_function ();
+
 std::vector<std::string> my_coloring_function( Cell* );
 
 // helper function to create a sphere of cells of a given radius

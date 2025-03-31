@@ -167,6 +167,45 @@ void post_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phe
 	return;
 }
 
+void reintroduce_nutrients_function () 
+{
+	if (PhysiCell::parameters.bools.find_index("nutrient_reintroduction") != -1) 
+	{
+		int nutrient_index = BioFVM::microenvironment.find_density_index(PhysiCell::parameters.strings("reintroduced_nutrient"));
+
+		if (PhysiCell::parameters.bools("nutrient_reintroduction")){
+			// Activate nutrient boundary at specified time
+			if (
+				(PhysiCell::PhysiCell_globals.current_time >= PhysiCell::parameters.doubles("reintroduction_start_time"))
+				&& (PhysiCell::PhysiCell_globals.current_time < (PhysiCell::parameters.doubles("reintroduction_start_time") + PhysiCell::parameters.doubles("reintroduction_duration")))
+				&& !BioFVM::microenvironment.get_substrate_dirichlet_activation(nutrient_index)
+			)
+			{
+				std::cout << PhysiCell::parameters.strings("reintroduced_nutrient") << " boundary activated at t=" << PhysiCell::PhysiCell_globals.current_time << std::endl;
+				BioFVM::microenvironment.set_substrate_dirichlet_activation(nutrient_index, true);	
+				std::cout << "Boundary condition set at: " << BioFVM::microenvironment.get_substrate_dirichlet_value(nutrient_index, 0) << std::endl;
+			}
+			else if (PhysiCell::PhysiCell_globals.current_time < (PhysiCell::parameters.doubles("reintroduction_start_time")))
+			{
+				BioFVM::microenvironment.set_substrate_dirichlet_activation(nutrient_index, false);
+			}
+
+			// Deactivate nutrient boundary after the duration
+			if (
+				(PhysiCell::PhysiCell_globals.current_time >= (PhysiCell::parameters.doubles("reintroduction_start_time") + PhysiCell::parameters.doubles("reintroduction_duration")))
+				&& BioFVM::microenvironment.get_substrate_dirichlet_activation(nutrient_index)
+			)
+			{
+				std::cout << PhysiCell::parameters.strings("reintroduced_nutrient") << " boundary deactivated at t=" << PhysiCell::PhysiCell_globals.current_time << std::endl;
+				BioFVM::microenvironment.set_substrate_dirichlet_activation(nutrient_index, false);	
+			}
+			
+		} else if ( BioFVM::microenvironment.get_substrate_dirichlet_activation(nutrient_index) ){
+			std::cout << PhysiCell::parameters.strings("reintroduced_nutrient") << " boundary forced deactivation at t=" << PhysiCell::PhysiCell_globals.current_time << std::endl;
+			BioFVM::microenvironment.set_substrate_dirichlet_activation(nutrient_index, false);	
+		}
+	}
+}
 
 std::vector<std::vector<double>> create_cell_sphere_positions(double cell_radius, double sphere_radius)
 {

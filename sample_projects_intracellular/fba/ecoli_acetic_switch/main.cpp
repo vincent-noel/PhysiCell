@@ -220,6 +220,8 @@ int main( int argc, char* argv[] )
 				}
 			}
 
+			reintroduce_nutrients_function();
+
 			// update the microenvironment
 			microenvironment.simulate_diffusion_decay( diffusion_dt );
 			
