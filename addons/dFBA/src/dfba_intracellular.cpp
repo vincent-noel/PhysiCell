@@ -297,11 +297,18 @@ void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& no
         exit(-1); 
     }
 
-    // parsing the transport model
+    // parsing the death model
     pugi::xml_node node_death_model = node.child( "death_model" ); 
     if ( node_death_model )
 	{ 
+        bool death_enabled = node_death_model.attribute("enabled").as_bool();
+        if (!death_enabled){
+            std::cout << "Death model disabled. Using default behavior (no metabolic-dependent death)." << std::endl;
+            this->use_metabolic_death = false;
+        }
+        else{
         parse_death_model(node_death_model);
+        }
     }
     else
     {
@@ -445,6 +452,7 @@ void dFBAIntracellular::update(){
     if (solution.status == "infeasible"){
         //std::cout << "I'm dead from the metabolic point of view" << std::endl;
         this->flag_for_death = true;
+        this->current_growth_rate = 0.0;
     }
     else if(solution.status == "unknown"){
         std::cout << "ERROR: Unknown status for the FBA problem!" << std::endl;

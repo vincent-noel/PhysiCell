@@ -138,6 +138,9 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 		}
 		else
 		{
+			this->current_growth_rate = 0.0;
+			// update the cell volume using the standard volume update function
+			PhysiCell::standard_volume_update_function(cell, phenotype, dt); // to update volume during necrosis, during necrotitc swelling, volume increases until rupture
 			return ;
 		}
 	};

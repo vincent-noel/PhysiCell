@@ -503,107 +503,89 @@ void dFBAModel::writeProblem(const char *filename)
 
 dFBASolution dFBAModel::optimize()
 {
-    //std::cout << "Running FBA... " << std::endl;
     this->problem.setLogLevel(0);
     this->problem.initialSolve();
+
+    int feasCheck = problem.primalFeasible();
+    if (feasCheck != 0) {
+        //std::cerr << "Problem infeasible BEFORE optimization. Status: " << feasCheck << "\n";
+    }
+
+    this->problem.setPrimalTolerance(1e-8);
+    this->problem.setDualTolerance(1e-8);
+    this->problem.scaling(1);
+    this->problem.setMaximumIterations(10000);
+
     this->problem.primal();
-    //std::cout << "Status after running " << this->problem.statusOfProblem() << std::endl;
-    //std::cout << "Before checking... " << std::endl;
-    //std::cout << "Checking if problem is proven optimal..." << std::endl;
     bool isOptimal = problem.isProvenOptimal();
-    if(isOptimal){
-        //std::cout << "Problem is proven optimal: " << isOptimal << std::endl;
-        //std::cout << "Optimal solution has been found!!! " << std::endl;
-        const double *columnPrimal = this->problem.getColSolution();
-        std::map<std::string,double> fluxes;
-        std::map<std::string,double> reduced_costs;
 
-        std::string status;
+    solution.fluxes.clear();
 
-        double fopt =  problem.getObjValue();
-        if (problem.status() == 0){
+    std::string status;
+    switch (this->problem.status()) {
+        case 0:
             status = "optimal";
-            //std::cout << status << std::endl;
-        }
-        else if (problem.status() == 1){
+            break;
+        case 1:
+        case 4:
             status = "infeasible";
-            std::cout << status << std::endl;
-        }
-        else{
+            break;
+        default:
             status = "unknown";
-            std::cout << status << std::endl;
-        }
-        
-        for(auto reaction: this->reactions)
-        {
-            int column_idx = this->reactionsIndexer[reaction->getId()];
-
-            double flux = columnPrimal[column_idx];
-            fluxes[reaction->getId()] = flux;
-            reaction->setFluxValue(flux);
-        }
-
-        solution.objective_value = fopt;
-        solution.status = status;
-        solution.fluxes = fluxes;
-
-    }
-    else{
-        //std::cout << "Problem is not proven optimal: " << isOptimal << std::endl; 
+            std::cerr << "Solver returned unknown status code: " << this->problem.status() << std::endl;
+            break;
     }
 
-    if ( isOptimal )
+    if (isOptimal)
     {
-        //std::cout << "Optimal solution found... ";
         const double *columnPrimal = this->problem.getColSolution();
-        std::map<std::string,double> fluxes;
-        std::map<std::string,double> reduced_costs;
-
-        std::string status;
 
         double fopt =  problem.getObjValue();
-        
-        if (problem.status() == 0){
-            status = "optimal";
-        }
-        else if (problem.status() == 1){
-            status = "infeasible";
-        }
-        else{
-            status = "unknown";
-        }
-        
+
         for(dFBAReaction* reaction: this->reactions)
         {
             int column_idx = this->reactionsIndexer[reaction->getId()];
             double flux = columnPrimal[column_idx];
-            fluxes[reaction->getId()] = flux;
+            solution.fluxes[reaction->getId()] = flux;
             reaction->setFluxValue(flux);
         }
 
         solution.objective_value = fopt;
         solution.status = status;
-        solution.fluxes = fluxes;
+
+        // Debugging info
+        //std::cout << "Optimal solution found: Objective = " << fopt << "\n";
+    }
+    else if (status == "infeasible")
+    {
+        solution.status = status;
+
+        //std::cerr << "FBA optimization infeasible. Cell should die.\n";
+        for (auto &reaction : this->reactions)
+        {
+            reaction->setFluxValue(0.0);
+        }
+        this->solution.objective_value = 0.0;
     }
     else
     {
-        //std::cout << "huston... " << std::endl;
-        std::string status;
-        if (this->problem.status() == 0){
-            status = "optimal";
-        }
-        else if (this->problem.status() == 1){
-            status = "infeasible";
-        }
-        else{
-            status = "unknown";
-        }
         solution.status = status;
-        for(dFBAReaction* reaction: this->reactions)
-        { reaction->setFluxValue(0.0); }
+
+        std::cerr << "ERROR: FBA optimization failed with unknown status!\n";
+        std::cerr << "Reaction bounds at failure:\n";
+        for (auto &reaction : this->reactions)
+        {
+            int idx = this->reactionsIndexer[reaction->getId()];
+            double lb = reaction->getLowerBound();
+            double ub = reaction->getUpperBound();
+            std::cerr << reaction->getId() << ": [" << lb << ", " << ub << "]\n";
+            reaction->setFluxValue(0.0);
+        }
     }
+
     return solution;
 }
+
 
 bool dFBAModel::getSolutionStatus()
 {

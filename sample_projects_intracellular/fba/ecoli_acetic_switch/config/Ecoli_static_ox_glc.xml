@@ -314,11 +314,11 @@
                         <max_growth_rate units="1/min">0.8</max_growth_rate>
                         <objective_reaction>BIOMASS_Ecoli_core_w_GAM</objective_reaction>
                     </growth_model>
-                    <death_model>
-                        <death_type>necrosis</death_type>
-                        <death_trigger_flux>R_ATPM</death_trigger_flux>
-                        <death_flux_threshold>8.4</death_flux_threshold>
-                        <death_rate_increase units="1/dt">1.67e-5</death_rate_increase>
+                    <death_model enabled="true">
+                        <death_type units="g/ml">necrosis</death_type>
+                        <death_trigger_flux units="1/min" />
+                        <death_flux_threshold />
+                        <death_rate_increase>1.67e-5</death_rate_increase>
                     </death_model>
                 </intracellular>
             </phenotype>
@@ -537,5 +537,9 @@
         <random_seed type="int" units="dimensionless" description="">50</random_seed>
         <colony_radius type="double" units="micron" description="">30.0</colony_radius>
         <number_of_cells type="int" units="" description="">0</number_of_cells>
+        <nutrient_reintroduction type="bool" units="dimensionless" description="">True</nutrient_reintroduction>
+        <reintroduced_nutrient type="string" units="dimensionless" description="">oxygen</reintroduced_nutrient>
+        <reintroduction_start_time type="double" units="minutes" description="">650</reintroduction_start_time>
+        <reintroduction_duration type="double" units="minutes" description="">350</reintroduction_duration>
     </user_parameters>
 </PhysiCell_settings>
