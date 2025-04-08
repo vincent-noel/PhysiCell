@@ -272,6 +272,8 @@ cancer-metabolism-sample:
 	cp ./sample_projects_intracellular/fba/cancer_metabolism/Makefile ./
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
 	cp ./sample_projects_intracellular/fba/cancer_metabolism/config/* ./config/
+	mkdir ./scripts/
+	cp ./sample_projects_intracellular/fba/cancer_metabolism/scripts/* ./scripts/
 
 template_BM:
 	cp ./sample_projects_intracellular/boolean/template_BM/custom_modules/* ./custom_modules/
