@@ -22,6 +22,7 @@ dFBAIntracellular::dFBAIntracellular() : Intracellular()
 	death_trigger_flux = "";
 	death_flux_threshold = 0.0;
 	death_rate_increase = 0.0;
+    substrate_exchanges.clear();
 	flag_for_death = false;
 }
 
@@ -39,7 +40,10 @@ dFBAIntracellular::dFBAIntracellular(pugi::xml_node& node)
 	death_trigger_flux = "";
 	death_flux_threshold = 0.0;
 	death_rate_increase = 0.0;
+    substrate_exchanges.clear();
 	flag_for_death = false;
+    sbml_model.clear();
+    is_initialized = false;
 	this->initialize_intracellular_from_pugixml(node);
 }
 
@@ -261,6 +265,21 @@ void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& no
         exit(-1); 
     }
 	
+    // Setting all the rest to default values : Nothing should be kept from the existing intracellular object (NO INHERITANCE)
+
+    objective_reaction = "";
+    cell_density = 0.0;
+    max_growth_rate = 0.0;
+    current_growth_rate = 0.0;
+    use_metabolic_death = false;
+	death_type = "";
+	death_trigger_flux = "";
+	death_flux_threshold = 0.0;
+	death_rate_increase = 0.0;
+    substrate_exchanges.clear();
+	flag_for_death = false;
+    sbml_model.clear();
+    is_initialized = false;
 
     // parsing the transport model
     pugi::xml_node node_transport_model = node.child( "transport_model" );
@@ -556,7 +575,7 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
             std::cout << "**** CellID " << pCell->ID << " Substrate: " << substrate_name << " concentration: " << substrate_conc << " Total substrate: " << total_substrate << " Consumption: " << substrate_consumption << " Net export rate: " << net_export_rate << std::endl;
         }
         */
-       /*
+        /*
         std::cout << " Cell Type: " << pCell->type_name << std::endl;
         std::cout << "\tSubstrate: " << substrate_name << std::endl;
         std::cout << "\tconcentration: " << substrate_conc << std::endl;
