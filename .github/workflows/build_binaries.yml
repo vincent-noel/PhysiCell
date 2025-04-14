@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
   release:
-    types: [created]
+    types: [published]
     
 jobs:
          
@@ -20,6 +20,7 @@ jobs:
           {short_name: "rules", project: "rules-sample", name: "PhysiCell Rules", binary: "project", extra_run: ""},
           {short_name: "physimess", project: "physimess-sample", name: "PhysiMeSS", binary: "project", extra_run: ""},
           {short_name: "interaction", project: "interaction-sample", name: "PhysiCell Interaction", binary: "interaction_demo", extra_run: ""},
+          {short_name: "episode", project: "episode-sample", name: "PhysiCell Episode", binary: "project", extra_run: ""},
         ]
     
     runs-on: ubuntu-22.04
@@ -32,7 +33,7 @@ jobs:
         make ${{ matrix.projects.project }}
         make clean
         ${{ matrix.projects.extra_run }}
-        make static STATIC_OPENMP=/usr/lib/gcc/x86_64-linux-gnu/12/libgomp.a PHYSICELL_CPP=g++-12
+        make static STATIC_OPENMP=/usr/lib/gcc/x86_64-linux-gnu/12/libgomp.a
       
     - name: Checking binary for ${{ matrix.projects.name }}
       run: |
@@ -66,6 +67,7 @@ jobs:
           {short_name: "rules", project: "rules-sample", name: "PhysiCell Rules", binary: "project", extra_run: ""},
           {short_name: "physimess", project: "physimess-sample", name: "PhysiMeSS", binary: "project", extra_run: ""},
           {short_name: "interaction", project: "interaction-sample", name: "PhysiCell Interaction", binary: "interaction_demo", extra_run: ""},
+          {short_name: "episode", project: "episode-sample", name: "PhysiCell Episode", binary: "project", extra_run: ""},
         ]
     
     runs-on: windows-latest
@@ -122,31 +124,37 @@ jobs:
           {short_name: "rules", project: "rules-sample", name: "PhysiCell Rules", binary: "project", extra_run: ""},
           {short_name: "physimess", project: "physimess-sample", name: "PhysiMeSS", binary: "project", extra_run: ""},
           {short_name: "interaction", project: "interaction-sample", name: "PhysiCell Interaction", binary: "interaction_demo", extra_run: ""},
-        ]
+          {short_name: "episode", project: "episode-sample", name: "PhysiCell Episode", binary: "project", extra_run: ""},
+       ]
     
-    runs-on: macos-12
+    runs-on: macos-13
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Install dependencies
-      run : brew install gcc@13
+      run : |
+        if ! brew list gcc@13 &>/dev/null; then
+          brew install gcc@13
+        else
+          echo "gcc@13 is already installed."
+        fi
       
     - name: Build ${{ matrix.projects.name }} project
       run: |
-        export MACOSX_DEPLOYMENT_TARGET=12
+        export MACOSX_DEPLOYMENT_TARGET=13
         make ${{ matrix.projects.project }}
         make clean
         ${{ matrix.projects.extra_run }}
         make PHYSICELL_CPP=g++-13 static
-        cp ${{ matrix.projects.binary }} ${{ matrix.projects.binary }}_macos12
+        cp ${{ matrix.projects.binary }} ${{ matrix.projects.binary }}_macos13
 
     - name: Caching produced project binary 
       uses: actions/cache@v4
       with:
         path: |
-          ${{ github.workspace }}/${{ matrix.projects.binary }}_macos12
-        key: ${{ runner.os }}-macos12-${{ github.run_id }}
+          ${{ github.workspace }}/${{ matrix.projects.binary }}_macos13
+        key: ${{ runner.os }}-macos13-${{ github.run_id }}
     
     - name: Look at the generated binary
       run: |
@@ -166,6 +174,7 @@ jobs:
           {short_name: "rules", project: "rules-sample", name: "PhysiCell Rules", binary: "project", extra_run: ""},
           {short_name: "physimess", project: "physimess-sample", name: "PhysiMeSS", binary: "project", extra_run: ""},
           {short_name: "interaction", project: "interaction-sample", name: "PhysiCell Interaction", binary: "interaction_demo", extra_run: ""},
+          {short_name: "episode", project: "episode-sample", name: "PhysiCell Episode", binary: "project", extra_run: ""},
         ]
     
     runs-on: macos-14
@@ -174,11 +183,16 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install dependencies
-      run : brew install gcc@13
+      run : |
+        if ! brew list gcc@13 &>/dev/null; then
+          brew install gcc@13
+        else
+          echo "gcc@13 is already installed."
+        fi
       
     - name: Build ${{ matrix.projects.name }} project
       run: |
-        export MACOSX_DEPLOYMENT_TARGET=12
+        export MACOSX_DEPLOYMENT_TARGET=13
         make ${{ matrix.projects.project }}
         make clean
         ${{ matrix.projects.extra_run }}
@@ -210,9 +224,10 @@ jobs:
           {short_name: "rules", project: "rules-sample", name: "PhysiCell Rules", binary: "project", extra_run: ""},
           {short_name: "physimess", project: "physimess-sample", name: "PhysiMeSS", binary: "project", extra_run: ""},
           {short_name: "interaction", project: "interaction-sample", name: "PhysiCell Interaction", binary: "interaction_demo", extra_run: ""},
+          {short_name: "episode", project: "episode-sample", name: "PhysiCell Episode", binary: "project", extra_run: ""},
         ]
         
-    runs-on: macos-12
+    runs-on: macos-13
     needs: [macos_step0a, macos_step0b]
 
     steps:
@@ -229,12 +244,12 @@ jobs:
       uses: actions/cache@v4
       with:
         path: |
-          ${{ github.workspace }}/${{ matrix.projects.binary }}_macos12
-        key: ${{ runner.os }}-macos12-${{ github.run_id }}
+          ${{ github.workspace }}/${{ matrix.projects.binary }}_macos13
+        key: ${{ runner.os }}-macos13-${{ github.run_id }}
     
     - name: Creating universal binary
       run: | 
-        lipo -create -output ${{ matrix.projects.binary }} ${{ matrix.projects.binary }}_macos12 ${{ matrix.projects.binary }}_macosm1
+        lipo -create -output ${{ matrix.projects.binary }} ${{ matrix.projects.binary }}_macos13 ${{ matrix.projects.binary }}_macosm1
 
     - name: Checking universal binary
       run: |
