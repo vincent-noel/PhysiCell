@@ -18,12 +18,13 @@ dFBAIntracellular::dFBAIntracellular() : Intracellular()
     current_growth_rate = 0.0;
     next_dfba_run = 0.0;
     use_metabolic_death = true;
-	death_type = "";
-	death_trigger_flux = "";
-	death_flux_threshold = 0.0;
-	death_rate_increase = 0.0;
+    death_type = "";
+    death_trigger_flux = "";
+    death_flux_threshold = 0.0;
+    death_rate_increase = 0.0;
     substrate_exchanges.clear();
-	flag_for_death = false;
+    flag_for_death = false;
+    dfba_time_step = PhysiCell::diffusion_dt; // Default value
 }
 
 dFBAIntracellular::dFBAIntracellular(pugi::xml_node& node)
@@ -36,15 +37,16 @@ dFBAIntracellular::dFBAIntracellular(pugi::xml_node& node)
     current_growth_rate = 0.0;
     next_dfba_run = 0.0;
     use_metabolic_death = true;
-	death_type = "";
-	death_trigger_flux = "";
-	death_flux_threshold = 0.0;
-	death_rate_increase = 0.0;
+    death_type = "";
+    death_trigger_flux = "";
+    death_flux_threshold = 0.0;
+    death_rate_increase = 0.0;
     substrate_exchanges.clear();
-	flag_for_death = false;
+    flag_for_death = false;
     sbml_model.clear();
     is_initialized = false;
-	this->initialize_intracellular_from_pugixml(node);
+    dfba_time_step = PhysiCell::diffusion_dt; // Default value
+    this->initialize_intracellular_from_pugixml(node);
 }
 
 dFBAIntracellular::dFBAIntracellular(const dFBAIntracellular& copy) : Intracellular() {
@@ -55,6 +57,7 @@ dFBAIntracellular::dFBAIntracellular(const dFBAIntracellular& copy) : Intracellu
     max_growth_rate = copy.max_growth_rate;
     current_growth_rate = copy.current_growth_rate;
     next_dfba_run = copy.next_dfba_run;
+    dfba_time_step = copy.dfba_time_step; // Copy the time step
 
     // Copy sbml_model
     sbml_model = copy.sbml_model;
@@ -336,6 +339,25 @@ void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& no
     }
 
 
+    // Parse dFBA time step from XML settings
+    pugi::xml_node node_settings = node.child("settings");
+    if (node_settings) {
+        pugi::xml_node node_intracellular_dt = node_settings.child("intracellular_dt");
+        pugi::xml_node node_time_step = node_settings.child("time_step");
+        if (node_intracellular_dt) {
+            dfba_time_step = PhysiCell::xml_get_my_double_value(node_intracellular_dt);
+        } else if (node_time_step) {
+            std::cout << "[Warning] The setting 'time_step' is deprecated. Please use 'intracellular_dt' instead." << std::endl;
+            dfba_time_step = PhysiCell::xml_get_my_double_value(node_time_step);
+        } else {
+            std::cout << "[Warning] No intracellular_dt or time_step specified. Using default value: " << PhysiCell::diffusion_dt << std::endl;
+            dfba_time_step = PhysiCell::diffusion_dt; // Default value
+        }
+    } else {
+        std::cout << "[Warning] No intracellular_dt or time_step specified. Using default value: " << PhysiCell::diffusion_dt << std::endl;
+        dfba_time_step = PhysiCell::diffusion_dt; // Default value
+    }
+
     std::cout << "Loading SBML model from: " << this->sbml_filename << std::endl;
     this->sbml_model.initModel(this->sbml_filename.c_str());
     
@@ -368,7 +390,7 @@ void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& no
 
 void dFBAIntracellular::start()
 {
-    this->next_dfba_run = PhysiCell::diffusion_dt + PhysiCell::PhysiCell_globals.current_time;
+    this->next_dfba_run = PhysiCell::PhysiCell_globals.current_time + dfba_time_step;
     /*
     for (const auto& reaction : this->sbml_model.getListOfReactions())
     {   
@@ -422,6 +444,7 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
 
     double mass_scaling = cell_dry_weight * 1e-12;
 
+    // Only declare the iterator ONCE per function
     map<std::string, ExchangeFluxData>::iterator it;
     for(it = this->substrate_exchanges.begin(); it != this->substrate_exchanges.end(); it++)
     {
@@ -442,7 +465,7 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
         // Here we are simulating what is going to happen in BioFVM after we plug the Net Export Rate (we will rescale it later)
 
         // max_rate = mmol/g DW cell/hours
-        double total_uptake = uptake_rate * dt * hours_to_minutes; // mmol/g DW cell
+        double total_uptake = uptake_rate * dfba_time_step * hours_to_minutes; // mmol/g DW cell
 
         // (picograms to grams conversion) 
         total_uptake *= mass_scaling; // mmol
@@ -451,11 +474,10 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
         // we are getting the total substrate of the voxel
         double total_substrate = substrate_conc * dV * 1e-15; // mmol
         // check if the we are taking more than what is stored in the voxel
-        // std::cout << "Substrate: " << substrate_name << " concentration: " << substrate_conc << " Total substrate: " << total_substrate << " Uptake: " << total_uptake << std::endl;
         double epsilon = 1e-18;
         if((total_substrate - total_uptake)  < epsilon){
             uptake_rate = total_substrate / mass_scaling; // mmol/gDW
-            uptake_rate /= (dt * hours_to_minutes); // mmol/gDW/hours
+            uptake_rate /= (dfba_time_step * hours_to_minutes); // mmol/gDW/hours
         }
 
         // Change sign to use as lower bound of the exchange flux
@@ -466,8 +488,12 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
 }
 
 void dFBAIntracellular::update(){
+    // Only run dFBA if current_time >= next_dfba_run
+    if (PhysiCell::PhysiCell_globals.current_time < next_dfba_run) {
+        return;
+    }
     dFBASolution solution = this->sbml_model.optimize();
-
+    next_dfba_run = PhysiCell::PhysiCell_globals.current_time + dfba_time_step;
     if (solution.status == "infeasible"){
         //std::cout << "I'm dead from the metabolic point of view" << std::endl;
         this->flag_for_death = true;
@@ -515,32 +541,19 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
     }
 
     double fba_growth_rate = this->current_growth_rate;
-    //std::cout << "Cell ID : " << pCell->ID << std::endl;
-
-    //std::cout << "Current growth rate: " << this->current_growth_rate << std::endl;
-    
-    double growth_rate = this->current_growth_rate * hours_to_minutes; // growth_rate 1/h -> 1/min
-    
-    // V(t+dt) = V(t) + V(t) * mu * dt = V(t) * (1 + u * dt) 
-    double volume_increase_ratio = 1.0 + (growth_rate * dt);
+    // SCALE GROWTH RATE BY this->dfba_time_step
+    double growth_rate = this->current_growth_rate * this->dfba_time_step * hours_to_minutes; // growth_rate 1/h * dt (h)
+    double volume_increase_ratio = 1.0 + growth_rate;
     phenotype.volume.multiply_by_ratio( volume_increase_ratio );
-    //std::cout << "Volume: " << phenotype.volume.total << std::endl;
     pCell->set_total_volume( phenotype.volume.total );
-    phenotype.geometry.update(pCell, phenotype, dt);
-
+    phenotype.geometry.update(pCell, phenotype, this->dfba_time_step);
     double solid_fraction = 1.0 - phenotype.volume.fluid_fraction;     
-    // um³ = um³
     double solid_volume = phenotype.volume.total * solid_fraction;   
-    // volume.total (um³ = fL) * cell_density (g/mL) = pico grams (g 10^-12)
     double cell_dry_weight = solid_volume * this->cell_density ;  
-    // re-scaling from pico grams to grams
     cell_dry_weight *= 1e-12; // pg * 10^-12 = g
-
     std::vector<double> density_vector = pCell->nearest_density_vector(); 
-
     double dV = microenvironment.voxels(pCell->get_current_voxel_index()).volume;
-    
-    // STEPS 4-5 - Update net_export_rates for the different densities
+    // For each substrate exchange, scale net_export_rates by this->dfba_time_step
     map<std::string, ExchangeFluxData>::iterator it;
     for(it = this->substrate_exchanges.begin(); it != this->substrate_exchanges.end(); it++)
     {
@@ -569,7 +582,7 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
         // correct scaling that takes into account the volume units (um³) in BioFVM
         double total_substrate = substrate_conc * (dV / 1e15); // mmol
 
-        double substrate_consumption = net_export_rate * dt * -1;
+        double substrate_consumption = net_export_rate * dfba_time_step * -1;
 
         /*if(substrate_consumption > total_substrate){
             std::cout << "**** CellID " << pCell->ID << " Substrate: " << substrate_name << " concentration: " << substrate_conc << " Total substrate: " << total_substrate << " Consumption: " << substrate_consumption << " Net export rate: " << net_export_rate << std::endl;
@@ -592,7 +605,7 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
         net_export_rate *= 1e15; // BioFVM units are in mM  =  mmol / L whereas dV is in um³ = 1e-15 L
 
         phenotype.secretion.net_export_rates[density_index] = net_export_rate;
-        pCell->set_internal_uptake_constants(dt);
+        pCell->set_internal_uptake_constants(this->dfba_time_step); // Update internal uptake constants based on the new volume and rates
         if (default_microenvironment_options.track_internalized_substrates_in_each_agent)
         {
             phenotype.molecular.internalized_total_substrates[density_index] = 0;

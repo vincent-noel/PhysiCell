@@ -50,6 +50,8 @@ class dFBAIntracellular : public PhysiCell::Intracellular
  private:
  public:
 
+    double dfba_time_step = PhysiCell::diffusion_dt; 
+
  	std::string sbml_filename;
 	std::string objective_reaction;
 	double reference_volume = 2494;

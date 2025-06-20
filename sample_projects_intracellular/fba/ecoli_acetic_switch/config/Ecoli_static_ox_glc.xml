@@ -287,6 +287,9 @@
                 </cell_integrity>
                 <intracellular type="dfba">
                     <sbml_filename>./config/Ecoli_core.xml</sbml_filename>
+                    <settings>
+                        <intracellular_dt>0.01</intracellular_dt>
+                    </settings>
                     <transport_model>
                         <exchange substrate="glucose">
                             <fba_flux>R_EX_glc__D_e</fba_flux>
@@ -479,6 +482,9 @@
                 </cell_integrity>
                 <intracellular type="dfba">
                     <sbml_filename>./config/Ecoli_core.xml</sbml_filename>
+                    <settings>
+                        <intracellular_dt>6</intracellular_dt>
+                    </settings>
                     <transport_model>
                         <exchange substrate="glucose">
                             <fba_flux>R_EX_glc__D_e</fba_flux>
