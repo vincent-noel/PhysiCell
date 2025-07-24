@@ -14,6 +14,7 @@ dFBAIntracellular::dFBAIntracellular() : Intracellular()
     objective_reaction = "";
     sbml_filename = "";
     cell_density = 0.0;
+    reference_volume = 0.0;
     max_growth_rate = 0.0;
     current_growth_rate = 0.0;
     next_dfba_run = 0.0;
@@ -33,6 +34,7 @@ dFBAIntracellular::dFBAIntracellular(pugi::xml_node& node)
     objective_reaction = "";
     sbml_filename = "";
     cell_density = 0.0;
+    reference_volume = 0.0;
     max_growth_rate = 0.0;
     current_growth_rate = 0.0;
     next_dfba_run = 0.0;
@@ -54,6 +56,7 @@ dFBAIntracellular::dFBAIntracellular(const dFBAIntracellular& copy) : Intracellu
     objective_reaction = copy.objective_reaction;
     sbml_filename = copy.sbml_filename;
     cell_density = copy.cell_density;
+    reference_volume = copy.reference_volume;
     max_growth_rate = copy.max_growth_rate;
     current_growth_rate = copy.current_growth_rate;
     next_dfba_run = copy.next_dfba_run;
@@ -161,6 +164,7 @@ int dFBAIntracellular::parse_transport_model(pugi::xml_node& node)
 
 void dFBAIntracellular::parse_growth_model(pugi::xml_node& parent)
 {
+    
     pugi::xml_node node = parent.child( "cell_density" );
 	if ( node )
 	{ 
@@ -173,6 +177,23 @@ void dFBAIntracellular::parse_growth_model(pugi::xml_node& parent)
         std::cout << std::endl; 
         exit(-1); 
     }
+
+    node = parent.child( "reference_volume" );
+	if ( node )
+	{ 
+        this->reference_volume = PhysiCell::xml_get_my_double_value(node);
+    }
+    else
+    {
+        std::cout << "Error: attempted to read reference_volume attribute." << std::endl;
+        std::cout << "Please double-check your reference_volume in the XML setting." << std::endl;
+        std::cout << "This value is used to determine the reference volume for cell division." << std::endl;
+        std::cout << "Ensure consistency with the total cell volume defined in the cell phenotype." << std::endl;
+        std::cout << std::endl; 
+        exit(-1); 
+    }
+
+
     node = parent.child( "max_growth_rate" );
 	if ( node )
 	{ 
@@ -420,7 +441,6 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
  
     
     double current_volume = phenotype.volume.total;
-    double Vmax_scale = current_volume / this->reference_volume;
 
     std::vector<double> density_vector = pCell->nearest_density_vector(); 
 

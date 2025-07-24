@@ -54,7 +54,7 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 
  	std::string sbml_filename;
 	std::string objective_reaction;
-	double reference_volume = 2494;
+	double reference_volume = 0.0;
 	double cell_density = 0.0;
 	double max_growth_rate = 0;
 	double current_growth_rate = 0;
@@ -134,7 +134,7 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 
 			this->next_dfba_run += PhysiCell::diffusion_dt;
 
-			if (phenotype.volume.total	>= 2 * this->reference_volume ){
+			if (phenotype.volume.total	>= 2 * this->reference_volume){
 				cell->flag_for_division();
 			}
 		}
