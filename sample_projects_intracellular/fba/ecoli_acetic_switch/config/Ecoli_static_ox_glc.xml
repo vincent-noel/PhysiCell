@@ -509,6 +509,7 @@
                     </transport_model>
                     <growth_model>
                         <cell_density units="g/ml">1.04</cell_density>
+                        <reference_volume units="micron^3">2494</reference_volume>
                         <max_growth_rate units="1/min" />
                         <objective_reaction />
                     </growth_model>
