@@ -52,9 +52,22 @@ jobs:
         make data-cleanup && make ${{ matrix.projects.project }} && make PHYSICELL_CPP=${{ matrix.os.compiler }} PROGRAM_NAME=${{ matrix.projects.binary }}
         
     - name: Inspect binary
-      if: matrix.os.name == 'Ubuntu' || matrix.os.name == 'MacOS 13' || matrix.os.name == 'MacOS 14 (M1)'
+      if: matrix.os.name == 'Ubuntu'
       run: |
         ldd ${{ matrix.projects.binary }}
+    
+    - name: Inspect mACOS binary
+      if: matrix.os.name == 'MacOS 13' || matrix.os.name == 'MacOS 14 (M1)'
+      run: |
+        otool -L ${{ matrix.projects.binary }}
+        otool -l ${{ matrix.projects.binary }}
+        lipo -archs ${{ matrix.projects.binary }}
+    
+    - name: Inspect Windows binary
+      if: matrix.os.name == 'Windows'
+      run: |
+        file ${{ matrix.projects.binary }}
+        objdump -f ${{ matrix.projects.binary }}
         
     - name: Run ${{ matrix.projects.name }} project
       run: |
