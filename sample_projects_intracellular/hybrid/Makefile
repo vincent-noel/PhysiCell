@@ -28,10 +28,9 @@ endif
 # MaBoSS directory
 MABOSS_DIR = addons/PhysiBoSS/MaBoSS/engine
 CUR_DIR = $(shell pwd)
-CUSTOM_DIR = sample_projects/Arnau_model/custom_modules
 EXT_DIR = $(CUR_DIR)/addons/dFBA/ext
 
-LIB_FBA := -L$(EXT_DIR)/libsbml/lib  $(EXT_DIR)/coin-or/lib/libClp.a $(EXT_DIR)/coin-or/lib/libCoinUtils.a -lsbml-static -lxml2 -lbz2 -lz -ggdb -llapack
+LIB_FBA := $(EXT_DIR)/libsbml/lib/libbz2.a $(EXT_DIR)/libsbml/lib/libzlib.a $(EXT_DIR)/libsbml/lib/libxml2.a $(EXT_DIR)/libsbml/lib/libsbml-static.a $(EXT_DIR)/coin-or/lib/libClp.a $(EXT_DIR)/coin-or/lib/libCoinUtils.a -llapack
 INC_FBA := -DADDON_PHYSIDFBA -I$(EXT_DIR)/libsbml/include -I$(EXT_DIR)/coin-or/include -I$(CUR_DIR)/addons/dFBA/src
 
 ifneq ($(OS), Windows_NT)
@@ -70,7 +69,7 @@ ARCH := native # best auto-tuning
 # ARCH := nocona #64-bit pentium 4 or later 
 
 # CFLAGS := -march=$(ARCH) -Ofast -s -fomit-frame-pointer -mfpmath=both -fopenmp -m64 -std=c++11
-CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -mfpmath=both -fopenmp -m64 -std=c++11 -ggdb
+CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -mfpmath=both -fopenmp -m64 -std=c++11
 
 ifeq ($(OS),Windows_NT)
 else

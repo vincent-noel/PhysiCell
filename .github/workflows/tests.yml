@@ -49,7 +49,7 @@ jobs:
     
     - name: Build ${{ matrix.projects.name }} project 
       run: |
-        make data-cleanup && make ${{ matrix.projects.project }} && make PHYSICELL_CPP=${{ matrix.os.compiler }} PROGRAM_NAME=${{ matrix.projects.binary }}
+        make data-cleanup && make ${{ matrix.projects.project }} && make PHYSICELL_CPP=${{ matrix.os.compiler }} PROGRAM_NAME=${{ matrix.projects.binary }} static
         
     - name: Inspect binary
       if: matrix.os.name == 'Ubuntu'
