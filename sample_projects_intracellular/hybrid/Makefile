@@ -30,7 +30,11 @@ MABOSS_DIR = addons/PhysiBoSS/MaBoSS/engine
 CUR_DIR = $(shell pwd)
 EXT_DIR = $(CUR_DIR)/addons/dFBA/ext
 
-LIB_FBA := $(EXT_DIR)/libsbml/lib/libsbml-static.a $(EXT_DIR)/libsbml/lib/libxml2.a $(EXT_DIR)/coin-or/lib/libClp.a $(EXT_DIR)/coin-or/lib/libCoinUtils.a -llapack $(EXT_DIR)/libsbml/lib/libbz2.a $(EXT_DIR)/libsbml/lib/libzlib.a
+ifndef STATIC_LAPACK
+	STATIC_LAPACK = -llapack
+endif
+
+LIB_FBA := $(EXT_DIR)/libsbml/lib/libsbml-static.a $(EXT_DIR)/libsbml/lib/libxml2.a $(EXT_DIR)/coin-or/lib/libClp.a $(EXT_DIR)/coin-or/lib/libCoinUtils.a $(STATIC_LAPACK) $(EXT_DIR)/libsbml/lib/libbz2.a $(EXT_DIR)/libsbml/lib/libzlib.a
 INC_FBA := -DADDON_PHYSIDFBA -I$(EXT_DIR)/libsbml/include -I$(EXT_DIR)/coin-or/include -I$(CUR_DIR)/addons/dFBA/src
 
 ifneq ($(OS), Windows_NT)
@@ -48,6 +52,10 @@ endif
 
 ifndef STATIC_OPENMP
 	STATIC_OPENMP = -fopenmp
+endif
+
+ifndef STATIC_LAPACK
+	STATIC_LAPACK = -llapack
 endif
 
 ARCH := native # best auto-tuning
@@ -118,7 +126,7 @@ all: main.cpp $(ALL_OBJECTS) $(MaBoSS) $(libFBA)
 	make name 
 
 static: main.cpp $(ALL_OBJECTS) $(MaBoSS) $(libFBA)
-	$(LINK_COMMAND) $(INC) $(INC_FBA) -o $(PROGRAM_NAME) $(ALL_OBJECTS) main.cpp $(LIB) $(LIB_FBA) -static-libgcc -static-libstdc++ $(STATIC_OPENMP)
+	$(LINK_COMMAND) $(INC) $(INC_FBA) -o $(PROGRAM_NAME) $(ALL_OBJECTS) main.cpp -static-libgcc -static-libstdc++ $(STATIC_OPENMP) $(LIB) $(LIB_FBA) 
 
 name:
 	@echo ""
