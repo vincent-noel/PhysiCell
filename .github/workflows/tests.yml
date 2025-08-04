@@ -33,7 +33,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - if: matrix.os.name == 'Ubuntu'
-      run: sudo apt-get update && sudo apt-get install -y liblapack-dev libbz2-dev
+      run: sudo apt-get update && sudo apt-get install -y liblapack-dev libbz2-dev libgfortran-12-dev
     
     - if: matrix.os.name == 'MacOS 13'
       run: brew install lapack bzip2
@@ -51,7 +51,7 @@ jobs:
       run: |
         make data-cleanup && make ${{ matrix.projects.project }}
         if [ "${{ matrix.os.name }}" == "Ubuntu" ]; then
-          make PHYSICELL_CPP=${{ matrix.os.compiler }} PROGRAM_NAME=${{ matrix.projects.binary }} static STATIC_OPENMP=/usr/lib/gcc/x86_64-linux-gnu/12/libgomp.a STATIC_LAPACK=/usr/lib/x86_64-linux-gnu/liblapack.a
+          make PHYSICELL_CPP=${{ matrix.os.compiler }} PROGRAM_NAME=${{ matrix.projects.binary }} static STATIC_OPENMP=/usr/lib/gcc/x86_64-linux-gnu/12/libgomp.a STATIC_LAPACK=/usr/lib/x86_64-linux-gnu/liblapack.a /usr/lib/x86_64-linux-gnu/libopenblas.a --static-libgfortran
         else
           make PHYSICELL_CPP=${{ matrix.os.compiler }} PROGRAM_NAME=${{ matrix.projects.binary }} static
         fi
