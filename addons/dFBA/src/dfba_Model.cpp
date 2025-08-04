@@ -8,6 +8,8 @@
 #include "dfba_Model.h"
 #include "dfba_Reaction.h"  // Include the full definition
 
+LIBSBML_CPP_NAMESPACE_USE
+
 /* Default dFBAModel used to initialize the initial cell */
 dFBAModel default_dFBAModel;
 

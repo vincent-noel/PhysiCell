@@ -30,7 +30,7 @@ MABOSS_DIR = addons/PhysiBoSS/MaBoSS/engine
 CUR_DIR = $(shell pwd)
 EXT_DIR = $(CUR_DIR)/addons/dFBA/ext
 
-LIB_FBA := $(EXT_DIR)/libsbml/lib/libbz2.a $(EXT_DIR)/libsbml/lib/libzlib.a $(EXT_DIR)/libsbml/lib/libxml2.a $(EXT_DIR)/libsbml/lib/libsbml-static.a $(EXT_DIR)/coin-or/lib/libClp.a $(EXT_DIR)/coin-or/lib/libCoinUtils.a -llapack
+LIB_FBA := $(EXT_DIR)/libsbml/lib/libsbml-static.a $(EXT_DIR)/libsbml/lib/libxml2.a $(EXT_DIR)/coin-or/lib/libClp.a $(EXT_DIR)/coin-or/lib/libCoinUtils.a -llapack $(EXT_DIR)/libsbml/lib/libbz2.a $(EXT_DIR)/libsbml/lib/libzlib.a
 INC_FBA := -DADDON_PHYSIDFBA -I$(EXT_DIR)/libsbml/include -I$(EXT_DIR)/coin-or/include -I$(CUR_DIR)/addons/dFBA/src
 
 ifneq ($(OS), Windows_NT)
