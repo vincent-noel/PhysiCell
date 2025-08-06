@@ -34,7 +34,15 @@ ifndef STATIC_LAPACK
 	STATIC_LAPACK = -llapack
 endif
 
-LIB_FBA := $(EXT_DIR)/libsbml/lib/libsbml-static.a $(EXT_DIR)/libsbml/lib/libxml2.a $(EXT_DIR)/coin-or/lib/libClp.a $(EXT_DIR)/coin-or/lib/libCoinUtils.a $(STATIC_LAPACK) $(EXT_DIR)/libsbml/lib/libbz2.a $(EXT_DIR)/libsbml/lib/libzlib.a
+ifndef STATIC_LIBBZ2
+	STATIC_LIBBZ2 = -lbz2
+endif
+
+ifndef STATIC_LIBZ
+	STATIC_LIBZ = -lz
+endif
+
+LIB_FBA := $(EXT_DIR)/libsbml/lib/libsbml-static.a $(EXT_DIR)/libsbml/lib/libxml2.a $(EXT_DIR)/coin-or/lib/libClp.a $(EXT_DIR)/coin-or/lib/libCoinUtils.a $(STATIC_LAPACK) $(EXT_DIR)/libsbml/lib/$(STATIC_LIBBZ2) $(EXT_DIR)/libsbml/lib/$(STATIC_LIBZ)
 INC_FBA := -DADDON_PHYSIDFBA -I$(EXT_DIR)/libsbml/include -I$(EXT_DIR)/coin-or/include -I$(CUR_DIR)/addons/dFBA/src
 
 ifneq ($(OS), Windows_NT)
