@@ -20,7 +20,7 @@
         },
         "osx-arm64":
         {
-            "version": "Clp-1.17.10-osx-arm64.tar.gz",
+            "version": "Clp-1.17.10-osx-14-arm64.tar.gz",
             "url": "https://github.com/vincent-noel/intracellular_libs/releases/download/0.2.0/Clp-1.17.10-osx-arm64.tar.gz"
         },
         "osx-x86_64":
@@ -49,7 +49,7 @@
         },
         "osx-arm64":
         {
-            "version": "libSBML-5.20.5-osx-arm64.tar.gz",
+            "version": "libSBML-5.20.5-osx-14-arm64.tar.gz",
             "url": "https://github.com/vincent-noel/intracellular_libs/releases/download/0.2.0/libSBML-5.20.5-osx-arm64.tar.gz"
         }
     }
