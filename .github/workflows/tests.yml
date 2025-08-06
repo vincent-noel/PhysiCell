@@ -37,12 +37,6 @@ jobs:
     - if: matrix.os.name == 'Ubuntu 22' || matrix.os.name == 'Ubuntu 24'
       run: sudo apt-get update && sudo apt-get install -y liblapack-dev libopenblas-dev
       
-    - if: matrix.os.name == 'MacOS 13'
-      run: brew install lapack bzip2
-      
-    - if: matrix.os.name == 'MacOS 14 (M1)'
-      run: brew install lapack bzip2
-        
     - if: matrix.os.name == 'Windows'
       uses: msys2/setup-msys2@v2
       with:
@@ -59,7 +53,7 @@ jobs:
         fi
                 
     - name: Inspect binary
-      if: matrix.os.name == 'Ubuntu'
+      if: matrix.os.name == 'Ubuntu 22' || matrix.os.name == 'Ubuntu 24'
       run: |
         ldd ${{ matrix.projects.binary }}
     
