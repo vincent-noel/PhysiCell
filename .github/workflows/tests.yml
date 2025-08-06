@@ -34,6 +34,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - if: matrix.os.name == 'Ubuntu 22' || matrix.os.name == 'Ubuntu 24'
+      run: sudo apt-get update && sudo apt-get install -y liblapack-dev libopenblas-dev
+      
     - if: matrix.os.name == 'MacOS 13'
       run: brew install lapack bzip2
       
