@@ -4,8 +4,14 @@
         "_refurl": "https://github.com/vincent-noel/intracellular_libs",
         "linux-x64": 
         {
-            "version": "Clp-1.17.10-linux64-glibc.tar.gz",
-            "url": "https://github.com/vincent-noel/intracellular_libs/releases/download/0.2.0/Clp-1.17.10-linux64-glibc2.35.tar.gz"
+            "glibc-2.35": {
+                "version": "Clp-1.17.10-linux64-glibc2.35.tar.gz",
+                "url": "https://github.com/vincent-noel/intracellular_libs/releases/download/0.2.0/Clp-1.17.10-linux64-glibc2.35.tar.gz"
+            },
+            "glibc-2.39": {
+                "version": "Clp-1.17.10-linux64-glibc2.39.tar.gz",
+                "url": "https://github.com/vincent-noel/intracellular_libs/releases/download/0.2.0/Clp-1.17.10-linux64-glibc2.39.tar.gz"
+            }
         },
         "win64": 
         {

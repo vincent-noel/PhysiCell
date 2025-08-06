@@ -8,6 +8,7 @@ import urllib.request
 import tarfile
 import zipfile
 import sys
+import subprocess
 
 def get_os_arch():
     """Determine the operating system and architecture."""
@@ -59,6 +60,19 @@ def download_and_extract(url, dest_path, is_zip=False):
     os.remove(file_path)
     print(f"{filename} installed successfully.\n")
 
+def get_glibc_version():
+        
+    try:
+        process = subprocess.run(['ldd', '--version'], capture_output=True, text=True, check=True)
+        output_lines = process.stdout.splitlines()
+        if output_lines:
+            # The first line usually contains the GLIBC version
+            return int(output_lines[0][-1].replace('.', ''))  # Convert version to integer (e.g., 2.35 -> 235)
+    except FileNotFoundError:
+        print("ldd command not found. Ensure glibc is installed and in your PATH.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing ldd: {e}")
+
 def main():
     # Define paths
     current_folder = os.path.abspath(os.path.dirname(__file__))
@@ -86,6 +100,23 @@ def main():
         ensure_directory_exists(pkg_path)
 
         pkg_dict = packages_dict.get(pkg, {}).get(arch)
+        if arch == 'linux-x64':
+            glibc_version = get_glibc_version()
+            if glibc_version:
+                if glibc_version >= 239:
+                    print(f"Detected glibc version {glibc_version}. Using glibc-2.39 package.")
+                    pkg_dict = pkg_dict.get('glibc-2.39', pkg_dict)
+                elif glibc_version >= 235:
+                    print(f"Detected glibc version {glibc_version}. Using glibc-2.35 package.")
+                    pkg_dict = pkg_dict.get('glibc-2.35', pkg_dict)
+                else:
+                    print(f"Old glibc version {glibc_version} detected. You might have compatibility issues. Using default package.")
+                    pkg_dict = pkg_dict.get('glibc-2.35', pkg_dict)
+
+            else:
+                print("Could not determine glibc version. Using default package.")
+                pkg_dict = pkg_dict.get(f'glibc-{glibc_version}', pkg_dict)
+        
         if not pkg_dict:
             print(f"No package information found for {pkg} on {arch}. Skipping...")
             continue
