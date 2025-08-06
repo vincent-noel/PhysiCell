@@ -51,7 +51,7 @@ jobs:
         else if [[ "${{ matrix.os.name }}" == "MacOS 13" || "${{ matrix.os.name }}" == "MacOS 14 (M1)" ]]; then
           make PHYSICELL_CPP=${{ matrix.os.compiler }} PROGRAM_NAME=${{ matrix.projects.binary }} static STATIC_LIBBZ2=libbz2.a STATIC_LIBZ=libzlib.a
              else
-          make PHYSICELL_CPP=${{ matrix.os.compiler }} PROGRAM_NAME=${{ matrix.projects.binary }} static STATIC_LIBBZ2=liblibbz2.a STATIC_LIBZ=libzdll.a
+          make PHYSICELL_CPP=${{ matrix.os.compiler }} PROGRAM_NAME=${{ matrix.projects.binary }} static STATIC_LIBBZ2=liblibbz2.a STATIC_LIBZ="libzdll.a -lws2_32"
           fi
         fi
                 
