@@ -39,8 +39,8 @@
         },
         "win64": 
         {
-            "version": "libSBML-5.20.5-win64-2022.tar.gz",
-            "url": "https://github.com/vincent-noel/intracellular_libs/releases/download/0.2.0/libSBML-5.20.5-win64-2022.tar.gz"
+            "version": "libSBML-5.20.5-win64-windows-2022.tar.gz",
+            "url": "https://github.com/vincent-noel/intracellular_libs/releases/download/0.2.0/libSBML-5.20.5-win64-windows-2022.tar.gz"
         },
         "osx-x86_64":
         {
