@@ -321,6 +321,19 @@ hybrid_intracellular:
 	mkdir ./scripts/
 	cp ./sample_projects_intracellular/hybrid/scripts/* ./scripts/
 
+
+hybrid2:
+	cp ./sample_projects_intracellular/hybrid2/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_intracellular/hybrid2/main.cpp ./main.cpp 
+	cp Makefile Makefile-backup
+	cp ./sample_projects_intracellular/hybrid2/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
+	cp -r ./sample_projects_intracellular/hybrid2/config/* ./config/
+	mkdir ./scripts/
+	cp ./sample_projects_intracellular/hybrid2/scripts/* ./scripts/
+
+
 # early examples for convergence testing 
 
 physicell_test_mech1: $(PhysiCell_OBJECTS) ./examples/PhysiCell_test_mechanics_1.cpp 

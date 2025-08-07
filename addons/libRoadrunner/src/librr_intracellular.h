@@ -24,8 +24,9 @@
 // #include "rrc_utilities.h"
 extern "C" rrc::RRHandle createRRInstance();
 // #endif
+class RoadRunnerIntracellular;
 
-typedef std::function<void(PhysiCell::Cell* pCell)> MappingFunction;
+typedef std::function<void(PhysiCell::Cell* pCell, RoadRunnerIntracellular *intracellular)> MappingFunction;
 
 class RoadRunnerMapping
 {
@@ -35,7 +36,7 @@ public:
 	std::string io_type;
 	std::string physicell_dictionary_name;
 	int index;
-	MappingFunction value_map = [] (PhysiCell::Cell *pCell) {}; // default to a function that does nothing
+	MappingFunction value_map = [] (PhysiCell::Cell *pCell, RoadRunnerIntracellular *intracellular) {}; // default to a function that does nothing
 	bool mapping_initialized = false;
 
 	RoadRunnerMapping() {};
@@ -138,8 +139,8 @@ class RoadRunnerIntracellular : public PhysiCell::Intracellular
 	void set_boolean_variable_value(std::string name, bool value)  {}
     void print_current_nodes() {}
 
-	double get_flux_value(std::string name);
-	double get_growth_rate();
+	double get_flux_value(std::string name) {return 0.0;}
+	double get_growth_rate() {return 0.0;}
 
 	static void save_libRR(std::string path, std::string index);
 };
