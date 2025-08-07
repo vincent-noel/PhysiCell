@@ -21,8 +21,9 @@ jobs:
         ]
         projects: [
           {project: "hybrid_intracellular", name: "PhysiCell Boolean/Metabolic model", binary: "project", config: "config/PhysiCell_settings.xml", max_time: 20, output_folder: ""},
+          {project: "hybrid2", name: "PhysiCell Hybrid model", binary: "project", config: "config/PhysiCell_settings.xml", max_time: 20, output_folder: ""},
         ]
-        
+
     name: Testing ${{ matrix.projects.name }} on ${{ matrix.os.name }}
         
     runs-on: ${{ matrix.os.os }}
