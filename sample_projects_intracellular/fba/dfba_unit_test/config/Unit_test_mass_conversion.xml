@@ -140,7 +140,7 @@
     </microenvironment_setup>
 
     <cell_definitions>
-        <cell_definition name="ecoli1" ID="0">
+        <cell_definition name="ecoli_1" ID="0">
             <phenotype>
                 <cycle code="5" name="live">
                     <phase_transition_rates units="1/min">

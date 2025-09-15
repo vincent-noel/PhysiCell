@@ -6851,14 +6851,14 @@
         <listOfReactants>
           <speciesReference species="M_3pg_c" stoichiometry="1.496" constant="true"/>
           <speciesReference species="M_accoa_c" stoichiometry="3.7478" constant="true"/>
-          <speciesReference species="M_atp_c" stoichiometry="59.81" constant="true"/>
+          <speciesReference species="M_atp_c" stoichiometry="0" constant="true"/>
           <speciesReference species="M_e4p_c" stoichiometry="0.361" constant="true"/>
           <speciesReference species="M_f6p_c" stoichiometry="0.0709" constant="true"/>
           <speciesReference species="M_g3p_c" stoichiometry="0.129" constant="true"/>
           <speciesReference species="M_g6p_c" stoichiometry="0.205" constant="true"/>
           <speciesReference species="M_gln__L_c" stoichiometry="0.2557" constant="true"/>
           <speciesReference species="M_glu__L_c" stoichiometry="4.9414" constant="true"/>
-          <speciesReference species="M_h2o_c" stoichiometry="59.81" constant="true"/>
+          <speciesReference species="M_h2o_c" stoichiometry="0" constant="true"/>
           <speciesReference species="M_nad_c" stoichiometry="3.547" constant="true"/>
           <speciesReference species="M_nadph_c" stoichiometry="13.0279" constant="true"/>
           <speciesReference species="M_oaa_c" stoichiometry="1.7867" constant="true"/>
@@ -6867,13 +6867,13 @@
           <speciesReference species="M_r5p_c" stoichiometry="0.8977" constant="true"/>
         </listOfReactants>
         <listOfProducts>
-          <speciesReference species="M_adp_c" stoichiometry="59.81" constant="true"/>
+          <speciesReference species="M_adp_c" stoichiometry="0" constant="true"/>
           <speciesReference species="M_akg_c" stoichiometry="4.1182" constant="true"/>
           <speciesReference species="M_coa_c" stoichiometry="3.7478" constant="true"/>
-          <speciesReference species="M_h_c" stoichiometry="59.81" constant="true"/>
+          <speciesReference species="M_h_c" stoichiometry="0" constant="true"/>
           <speciesReference species="M_nadh_c" stoichiometry="3.547" constant="true"/>
           <speciesReference species="M_nadp_c" stoichiometry="13.0279" constant="true"/>
-          <speciesReference species="M_pi_c" stoichiometry="59.81" constant="true"/>
+          <speciesReference species="M_pi_c" stoichiometry="0" constant="true"/>
         </listOfProducts>
       </reaction>
       <reaction id="R_PYRt2" fast="false" reversible="true" name="Pyruvate transport in via proton symport" metaid="R_PYRt2" sboTerm="SBO:0000185" fbc:upperFluxBound="cobra_default_ub" fbc:lowerFluxBound="cobra_default_lb">
