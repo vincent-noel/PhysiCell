@@ -563,8 +563,14 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
     double fba_growth_rate = this->current_growth_rate;
     // SCALE GROWTH RATE BY this->dfba_time_step
     double growth_rate = this->current_growth_rate * this->dfba_time_step * hours_to_minutes; // growth_rate 1/h * dt (h)
-    double volume_increase_ratio = 1.0 + growth_rate;
-    phenotype.volume.multiply_by_ratio( volume_increase_ratio );
+
+    // exact solution (fallback to linear for very small x to avoid exp overhead)
+    const double factor = (std::abs(growth_rate) < 1e-6) ? (1.0 + growth_rate) : std::exp(growth_rate);
+
+    const double safe_factor = std::max(factor, 1e-12);
+
+    //double volume_increase_ratio = 1.0 + growth_rate;
+    phenotype.volume.multiply_by_ratio( safe_factor );
     pCell->set_total_volume( phenotype.volume.total );
     phenotype.geometry.update(pCell, phenotype, this->dfba_time_step);
     double solid_fraction = 1.0 - phenotype.volume.fluid_fraction;     
