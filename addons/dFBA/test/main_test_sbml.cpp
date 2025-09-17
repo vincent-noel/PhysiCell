@@ -30,7 +30,7 @@ int main (int argc, char* argv[])
   cout << " Reading filename: " << filename << endl;
   cout << " Validation error(s): " << errors << endl;
   cout << endl;
-//   document->printErrors(cerr);
+   document->printErrors(cerr);
 
   Model* model = document->getModel();
   int n_species = model->getNumSpecies();

@@ -303,10 +303,29 @@ void dFBAModel::readSBMLModel(const char* sbmlFileName)
     SBMLDocument* document = reader.readSBML(sbmlFileName);
 
     // Check if the document was successfully read
-    if (document == nullptr || document->getNumErrors() > 0) {
-        std::cerr << "Error reading SBML file: " << sbmlFileName << std::endl;
+    if (document == nullptr) {
+    std::cerr << "Error: SBMLDocument is null for " << sbmlFileName << "\n";
+    return;
+    }
+
+    // Optional: run consistency checks (can add more warnings)
+    // document->checkConsistency();
+
+    const unsigned nFatal = document->getNumErrors(LIBSBML_SEV_FATAL);
+    const unsigned nError = document->getNumErrors(LIBSBML_SEV_ERROR);
+    const unsigned nWarn  = document->getNumErrors(LIBSBML_SEV_WARNING);
+
+    if (nFatal + nError > 0) {
+        std::cerr << "Failed to read SBML: " << sbmlFileName << "\n";
+        document->printErrors();  // show why it failed
         delete document;
         return;
+    }
+
+    // Non-fatal: show warnings but continue
+    if (nWarn) {
+        std::cerr << "Validation warning(s): " << nWarn << "\n";
+        document->printErrors();
     }
 
     Model* model = document->getModel();
