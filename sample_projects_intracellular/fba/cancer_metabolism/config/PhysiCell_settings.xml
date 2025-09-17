@@ -10,15 +10,15 @@
     </cell_rules>
 
     <domain>
-        <x_min>-500</x_min>
-        <x_max>500</x_max>
-        <y_min>-500</y_min>
-        <y_max>500</y_max>
-        <z_min>-10</z_min>
-        <z_max>10</z_max>
-        <dx>20</dx>
-        <dy>20</dy>
-        <dz>20</dz>
+        <x_min>-500.0</x_min>
+        <x_max>500.0</x_max>
+        <y_min>-500.0</y_min>
+        <y_max>500.0</y_max>
+        <z_min>-10.0</z_min>
+        <z_max>10.0</z_max>
+        <dx>20.0</dx>
+        <dy>20.0</dy>
+        <dz>20.0</dz>
         <use_2D>true</use_2D>
     </domain>
 
@@ -146,6 +146,9 @@
                     <phase_transition_rates units="1/min">
                         <rate start_index="0" end_index="0" fixed_duration="false">0.0</rate>
                     </phase_transition_rates>
+                    <standard_asymmetric_division enabled="False">
+                        <asymmetric_division_probability name="cancer" units="dimensionless">1.0</asymmetric_division_probability>
+                    </standard_asymmetric_division>
                 </cycle>
                 <death>
                     <model code="100" name="apoptosis">
@@ -180,7 +183,7 @@
                 </death>
                 <volume>
                     <total units="micron^3">2494</total>
-                    <fluid_fraction units="dimensionless">0.75</fluid_fraction>
+                    <fluid_fraction units="dimensionless">0.70</fluid_fraction>
                     <nuclear units="micron^3">540</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
@@ -281,32 +284,32 @@
                     <damage_repair_rate units="1/min">0.0</damage_repair_rate>
                 </cell_integrity>
                 <intracellular type="dfba">
-                    <sbml_filename>./config/iSIM.xml</sbml_filename>
-                    <config>
-                        <intracellular_dt units="min">0.1</intracellular_dt>
-                    </config>
+                    <sbml_filename>/home/mruscone/Desktop/github/PhysiCelldFBA/config/Human-GEM.xml</sbml_filename>
+                    <settings>
+                        <intracellular_dt units="min">0.01</intracellular_dt>
+                    </settings>
                     <transport_model>
                         <exchange substrate="glucose">
-                            <fba_flux>R_E1</fba_flux>
+                            <fba_flux>MAR09337</fba_flux>
                             <Km units="mM">1.0</Km>
-                            <Vmax units="fmol/pg DW cell/min">5.0</Vmax>
+                            <Vmax units="fmol/pg DW cell/min">15.0</Vmax>
                         </exchange>
                         <exchange substrate="lactate">
-                            <fba_flux>R_E2</fba_flux>
-                            <Km units="mM">1.0</Km>
-                            <Vmax units="fmol/pg DW cell/min">5.0</Vmax>
+                            <fba_flux>MAR09135</fba_flux>
+                            <Km units="mM">3.0</Km>
+                            <Vmax units="fmol/pg DW cell/min">10.0</Vmax>
                         </exchange>
                         <exchange substrate="oxygen">
-                            <fba_flux>R_E3</fba_flux>
-                            <Km units="mM">1.0</Km>
+                            <fba_flux>MAR09048</fba_flux>
+                            <Km units="mM">0.001</Km>
                             <Vmax units="fmol/pg DW cell/min">18</Vmax>
                         </exchange>
                     </transport_model>
                     <growth_model>
-                        <cell_density units="g/ml">1.04</cell_density>
-                        <reference_volume units="micron^3">2494</reference_volume>
+                        <cell_density units="g/ml">1.05</cell_density>
+                        <reference_volume units="pg">2494</reference_volume>
                         <max_growth_rate units="1/min">0.8</max_growth_rate>
-                        <objective_reaction>R_R4</objective_reaction>
+                        <objective_reaction>MAR13082</objective_reaction>
                     </growth_model>
                     <death_model enabled="true">
                         <death_type units="g/ml">necrosis</death_type>
