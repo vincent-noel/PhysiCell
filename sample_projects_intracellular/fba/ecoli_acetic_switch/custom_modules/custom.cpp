@@ -88,13 +88,6 @@ void create_cell_types(void)
 	
 	setup_signal_behavior_dictionaries();
 
-	Cell_Definition* ecoli = find_cell_definition( "ecoli_1");
-	//  This sets the pre and post intracellular update functions
-	ecoli->functions.pre_update_intracellular =  NULL;
-	ecoli->functions.post_update_intracellular = post_update_intracellular;
-	ecoli->functions.update_phenotype = NULL; 
-	ecoli->functions.volume_update_function = NULL;
-
 	display_cell_definitions(std::cout);
 
 	return;
