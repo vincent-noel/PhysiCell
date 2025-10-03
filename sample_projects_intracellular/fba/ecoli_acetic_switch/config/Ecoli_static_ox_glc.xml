@@ -10,10 +10,10 @@
     </cell_rules>
 
     <domain>
-        <x_min>-500.0</x_min>
-        <x_max>500.0</x_max>
-        <y_min>-500.0</y_min>
-        <y_max>500.0</y_max>
+        <x_min>-250.0</x_min>
+        <x_max>250.0</x_max>
+        <y_min>-250.0</y_min>
+        <y_max>250.0</y_max>
         <z_min>-10.0</z_min>
         <z_max>10.0</z_max>
         <dx>20.0</dx>
@@ -23,7 +23,7 @@
     </domain>
 
     <overall>
-        <max_time units="min">600.0</max_time>
+        <max_time units="min">420.0</max_time>
         <time_units>min</time_units>
         <space_units>micron</space_units>
         <dt_diffusion units="min">0.01</dt_diffusion>
@@ -38,7 +38,7 @@
     <save>
         <folder>output</folder>
         <full_data>
-            <interval units="min">10</interval>
+            <interval units="min">5</interval>
             <enable>true</enable>
         </full_data>
         <SVG>
@@ -65,26 +65,26 @@
     <microenvironment_setup>
         <variable name="oxygen" units="dimensionless" ID="0">
             <physical_parameter_set>
-                <diffusion_coefficient units="micron^2/min">180000.0</diffusion_coefficient>
+                <diffusion_coefficient units="micron^2/min">120000.0</diffusion_coefficient>
                 <decay_rate units="1/min">0.0</decay_rate>
             </physical_parameter_set>
-            <initial_condition units="mM">1.0</initial_condition>
-            <Dirichlet_boundary_condition units="mM" enabled="True">0.0</Dirichlet_boundary_condition>
+            <initial_condition units="mM">96</initial_condition>
+            <Dirichlet_boundary_condition units="mM" enabled="False">100</Dirichlet_boundary_condition>
             <Dirichlet_options>
-                <boundary_value ID="xmin" enabled="True">1.0</boundary_value>
-                <boundary_value ID="xmax" enabled="True">1.0</boundary_value>
-                <boundary_value ID="ymin" enabled="True">1.0</boundary_value>
-                <boundary_value ID="ymax" enabled="True">1.0</boundary_value>
+                <boundary_value ID="xmin" enabled="False">0.0</boundary_value>
+                <boundary_value ID="xmax" enabled="False">0.0</boundary_value>
+                <boundary_value ID="ymin" enabled="False">0.0</boundary_value>
+                <boundary_value ID="ymax" enabled="False">0.0</boundary_value>
                 <boundary_value ID="zmin" enabled="False">0.0</boundary_value>
                 <boundary_value ID="zmax" enabled="False">0.0</boundary_value>
             </Dirichlet_options>
         </variable>
         <variable name="glucose" units="dimensionless" ID="1">
             <physical_parameter_set>
-                <diffusion_coefficient units="micron^2/min">48000.0</diffusion_coefficient>
+                <diffusion_coefficient units="micron^2/min">40000.0</diffusion_coefficient>
                 <decay_rate units="1/min">0.0</decay_rate>
             </physical_parameter_set>
-            <initial_condition units="mM">10.0</initial_condition>
+            <initial_condition units="mM">120.0</initial_condition>
             <Dirichlet_boundary_condition units="mM" enabled="False">0</Dirichlet_boundary_condition>
             <Dirichlet_options>
                 <boundary_value ID="xmin" enabled="False">0</boundary_value>
@@ -97,7 +97,7 @@
         </variable>
         <variable name="acetate" units="dimensionless" ID="2">
             <physical_parameter_set>
-                <diffusion_coefficient units="micron^2/min">360.00</diffusion_coefficient>
+                <diffusion_coefficient units="micron^2/min">65000.00</diffusion_coefficient>
                 <decay_rate units="1/min">0.0</decay_rate>
             </physical_parameter_set>
             <initial_condition units="mmol">0.0</initial_condition>
@@ -167,15 +167,15 @@
                     </model>
                     <model code="101" name="necrosis">
                         <death_rate units="1/min">0.0</death_rate>
-                        <phase_durations units="min">
-                            <duration index="0" fixed_duration="true">0</duration>
-                            <duration index="1" fixed_duration="true">86400</duration>
-                        </phase_durations>
+                        <phase_transition_rates units="1/min">
+                            <rate start_index="0" end_index="1" fixed_duration="false">9000000000.0</rate>
+                            <rate start_index="1" end_index="2" fixed_duration="true">1.15741e-05</rate>
+                        </phase_transition_rates>
                         <parameters>
-                            <unlysed_fluid_change_rate units="1/min">0.05</unlysed_fluid_change_rate>
-                            <lysed_fluid_change_rate units="1/min">0</lysed_fluid_change_rate>
-                            <cytoplasmic_biomass_change_rate units="1/min">1.66667e-02</cytoplasmic_biomass_change_rate>
-                            <nuclear_biomass_change_rate units="1/min">5.83333e-03</nuclear_biomass_change_rate>
+                            <unlysed_fluid_change_rate units="1/min">1.11667e-2</unlysed_fluid_change_rate>
+                            <lysed_fluid_change_rate units="1/min">8.33333e-4</lysed_fluid_change_rate>
+                            <cytoplasmic_biomass_change_rate units="1/min">5.33333e-5</cytoplasmic_biomass_change_rate>
+                            <nuclear_biomass_change_rate units="1/min">2.16667e-3</nuclear_biomass_change_rate>
                             <calcification_rate units="1/min">0</calcification_rate>
                             <relative_rupture_volume units="dimensionless">2.0</relative_rupture_volume>
                         </parameters>
@@ -183,11 +183,11 @@
                 </death>
                 <volume>
                     <total units="micron^3">2494</total>
-                    <fluid_fraction units="dimensionless">0.70</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <fluid_fraction units="dimensionless">0.75</fluid_fraction>
+                    <nuclear units="micron^3">0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
-                    <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
+                    <nuclear_biomass_change_rate units="1/min">0</nuclear_biomass_change_rate>
                     <calcified_fraction units="dimensionless">0</calcified_fraction>
                     <calcification_rate units="1/min">0</calcification_rate>
                     <relative_rupture_volume units="dimensionless">2.0</relative_rupture_volume>
@@ -291,17 +291,17 @@
                     <transport_model>
                         <exchange substrate="glucose">
                             <fba_flux>R_EX_glc__D_e</fba_flux>
-                            <Km units="mM">0.02</Km>
+                            <Km units="mM">0.001</Km>
                             <Vmax units="fmol/pg DW cell/min">8.0</Vmax>
                         </exchange>
                         <exchange substrate="acetate">
                             <fba_flux>R_EX_ac_e</fba_flux>
-                            <Km units="mM">1</Km>
+                            <Km units="mM">0.001</Km>
                             <Vmax units="fmol/pg DW cell/min">5.0</Vmax>
                         </exchange>
                         <exchange substrate="oxygen">
                             <fba_flux>R_EX_o2_e</fba_flux>
-                            <Km units="mM">0.001</Km>
+                            <Km units="mM">0.002</Km>
                             <Vmax units="fmol/pg DW cell/min">18</Vmax>
                         </exchange>
                         <exchange substrate="CO2">
@@ -311,10 +311,10 @@
                         </exchange>
                     </transport_model>
                     <growth_model>
-                        <cell_density units="g/ml">1.08</cell_density>
+                        <cell_density units="g/ml">1.04</cell_density>
                         <reference_volume units="pg">2494</reference_volume>
-                        <max_growth_rate units="1/min">0.8</max_growth_rate>
-                        <objective_reaction>R_BIOMASS_Ecoli_core_w_GAM</objective_reaction>
+                        <max_growth_rate units="1/min">0.86</max_growth_rate>
+                        <objective_reaction>R_Biomass_Ecoli_core</objective_reaction>
                     </growth_model>
                     <death_model enabled="false">
                         <death_type units="g/ml">necrosis</death_type>
@@ -328,8 +328,9 @@
                 <oxygen_flux conserved="false" units="mM/min" description="">0.0</oxygen_flux>
                 <glucose_flux conserved="false" units="mM/min" description="">0.0</glucose_flux>
                 <acetate_flux conserved="false" units="mM/min" description="">0.0</acetate_flux>
-                <growth_rate conserved="false" units="1/min" description="">0.0</growth_rate>
                 <co2_flux conserved="false" units="mM/min" description="">0.0</co2_flux>
+                <growth_rate conserved="false" units="1/min" description="">0.0</growth_rate>
+                <growth_factor conserved="false" units="1/min" description="">0.0</growth_factor>
             </custom_data>
             <initial_parameter_distributions enabled="false">
           </initial_parameter_distributions>
@@ -339,17 +340,20 @@
     <initial_conditions>
         <cell_positions type="csv" enabled="true">
             <folder>./config</folder>
-            <filename>cells_2.csv</filename>
+            <filename>cells.csv</filename>
         </cell_positions>
     </initial_conditions>
 
     <user_parameters>
-        <random_seed type="int" units="dimensionless" description="">50</random_seed>
+        <random_seed type="int" units="dimensionless" description="">60</random_seed>
         <colony_radius type="double" units="micron" description="">30.0</colony_radius>
         <number_of_cells type="int" units="" description="">0</number_of_cells>
         <nutrient_reintroduction type="bool" units="dimensionless" description="">True</nutrient_reintroduction>
         <reintroduced_nutrient type="string" units="dimensionless" description="">oxygen</reintroduced_nutrient>
-        <reintroduction_start_time type="double" units="minutes" description="">240</reintroduction_start_time>
-        <reintroduction_duration type="double" units="minutes" description="">500</reintroduction_duration>
+        <reintroduction_start_time type="double" units="minutes" description="">650</reintroduction_start_time>
+        <reintroduction_duration type="double" units="minutes" description="">10</reintroduction_duration>
+        <start_growing_time type="double" units="minutes" description="">60</start_growing_time>
+        <reinject_oxygen_time type="double" units="minutes" description="">210</reinject_oxygen_time>
+        <o2_concentration type="double" units="mM" description="">96</o2_concentration>
     </user_parameters>
 </PhysiCell_settings>
