@@ -14,6 +14,7 @@
 #include "../../../core/PhysiCell.h"
 #include "../../../core/PhysiCell_phenotype.h"
 #include "../../../core/PhysiCell_cell.h"
+#include "../../../core/PhysiCell_utilities.h"
 #include "../../../modules/PhysiCell_pugixml.h"
 #include "../../../core/PhysiCell_constants.h"
 
@@ -134,8 +135,27 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 
 			this->next_dfba_run += PhysiCell::diffusion_dt;
 
-			if (phenotype.volume.total	>= 2 * this->reference_volume){
-				cell->flag_for_division();
+			// if (phenotype.volume.total	>= 2 * this->reference_volume){
+			// 	cell->flag_for_division();
+			// }
+			double v = phenotype.volume.total;
+			double v_ref = this->reference_volume;
+
+			// Only start checking after ~1.6 × reference volume
+			if (v >= 1.6 * v_ref) {
+				// normalized progress from 0 (at 1.6×) to 1 (at 2×)
+				double progress = (v - 1.6 * v_ref) / (0.4 * v_ref);
+				if (progress < 0.0) progress = 0.0;
+				if (progress > 1.0) progress = 1.0;
+
+				// map progress to probability of dividing this timestep
+				// e.g. sigmoid or just linear:
+				double prob = progress;   // 0 at 1.6×, 1 at 2×
+
+				// stochastic check
+				if (PhysiCell::UniformRandom() < prob * dt) {
+					cell->flag_for_division();
+				}
 			}
 		}
 		else
