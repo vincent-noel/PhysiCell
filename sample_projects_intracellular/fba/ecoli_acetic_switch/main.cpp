@@ -75,6 +75,8 @@
 
 #include "./core/PhysiCell.h"
 #include "./modules/PhysiCell_standard_modules.h" 
+#include "./addons/dFBA/src/dfba_intracellular.h"
+#include "./addons/dFBA/src/dfba_Model.h"
 
 // put custom code modules here! 
 
@@ -181,8 +183,21 @@ int main( int argc, char* argv[] )
 		report_file<<"simulated time\tnum cells\tnum division\tnum death\twall time"<<std::endl;
 	}
 	
-	// main loop 
+	// main loop
+	#pragma omp parallel for
+	for(int n=0; n < all_cells->size(); n++)
+	{
+		// std::cout << "Updating " << pCell->ID << " dFBA model bounds" << std::endl;
+		PhysiCell::Cell* pCell = (*all_cells)[n];
+		PhysiCelldFBA::dFBAIntracellular* intracell_model = static_cast<PhysiCelldFBA::dFBAIntracellular*>( pCell->phenotype.intracellular );
+		std::string biomass = intracell_model->objective_reaction;
+		dFBAModel& sbml_model = intracell_model->sbml_model;
+		sbml_model.setReactionUpperBound(biomass, 0.0);
+	}
 	
+	double start_growing_time = parameters.doubles("start_growing_time");
+	double reinject_oxygen_time = parameters.doubles("reinject_oxygen_time");
+	static double o2_concentration = parameters.doubles("o2_concentration");
 	try 
 	{		
 		while( PhysiCell_globals.current_time < PhysiCell_settings.max_time + 0.1*diffusion_dt )
@@ -220,7 +235,8 @@ int main( int argc, char* argv[] )
 				}
 			}
 
-			reintroduce_nutrients_function();
+
+
 
 			// update the microenvironment
 			microenvironment.simulate_diffusion_decay( diffusion_dt );
@@ -231,7 +247,36 @@ int main( int argc, char* argv[] )
 			/*
 			  Custom add-ons could potentially go here. 
 			*/
+
+			// reintroduce_nutrients_function();
 			
+			if ( PhysiCell_globals.current_time >= reinject_oxygen_time){
+				static int oxygen_id = 0;
+				inject_density(oxygen_id, o2_concentration);
+				reinject_oxygen_time = PhysiCell_settings.max_time + 100;
+			}
+
+			// Lets make E. coli in non-growth state until 3h
+			if ( PhysiCell_globals.current_time >= start_growing_time ){
+				double val = 0;
+				double current_growth = 0;
+				#pragma omp parallel for
+				for(int n=0; n < all_cells->size(); n++)
+				{
+					// std::cout << "Updating " << pCell->ID << " dFBA model bounds" << std::endl;
+					PhysiCell::Cell* pCell = (*all_cells)[n];
+					PhysiCelldFBA::dFBAIntracellular* intracell_model = static_cast<PhysiCelldFBA::dFBAIntracellular*>( pCell->phenotype.intracellular );
+					std::string biomass = intracell_model->objective_reaction;
+					dFBAModel& sbml_model = intracell_model->sbml_model;
+					float max_growth_rate = intracell_model->max_growth_rate;
+					sbml_model.setReactionUpperBound(biomass, max_growth_rate);
+					current_growth += intracell_model->current_growth_rate;
+					val = max_growth_rate;
+				}
+				//start_growing_time = PhysiCell_settings.max_time + 100;
+				current_growth /= all_cells->size();
+			}
+
 			PhysiCell_globals.current_time += diffusion_dt;
 		}
 		
