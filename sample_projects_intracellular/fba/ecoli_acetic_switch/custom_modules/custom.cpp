@@ -88,6 +88,13 @@ void create_cell_types(void)
 	
 	setup_signal_behavior_dictionaries();
 
+	Cell_Definition* ecoli = find_cell_definition( "ecoli");
+	//  This sets the pre and post intracellular update functions
+	ecoli->functions.pre_update_intracellular =  NULL;
+	ecoli->functions.post_update_intracellular = post_update_intracellular;
+	ecoli->functions.update_phenotype = NULL; 
+	ecoli->functions.volume_update_function = NULL;
+
 	display_cell_definitions(std::cout);
 
 	return;
@@ -151,8 +158,9 @@ void setup_tissue(void)
 }
 
 void post_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt ){
-	pCell->custom_data["growth_rate"] = pCell->phenotype.intracellular->get_growth_rate();
 
+	
+	pCell->custom_data["growth_rate"] = fba_growth_rate;
 	pCell->custom_data["oxygen_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_o2_e");
 	pCell->custom_data["glucose_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_glc__D_e");
 	pCell->custom_data["acetate_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_ac_e");
@@ -199,6 +207,19 @@ void reintroduce_nutrients_function ()
 		}
 	}
 }
+
+void inject_density(int density_index, double concentration)
+{
+	// Inject given concentration on the extremities only
+	#pragma omp parallel for
+	for (int n = 0; n < microenvironment.number_of_voxels(); n++)
+	{
+		auto current_voxel = microenvironment.voxels(n);
+		microenvironment.density_vector(n)[density_index] = concentration;
+	}
+}
+
+
 
 std::vector<std::vector<double>> create_cell_sphere_positions(double cell_radius, double sphere_radius)
 {
