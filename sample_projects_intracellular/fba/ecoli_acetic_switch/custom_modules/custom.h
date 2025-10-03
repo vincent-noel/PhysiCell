@@ -96,6 +96,7 @@ void pre_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phen
 void post_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt );
 
 void reintroduce_nutrients_function ();
+void inject_density(int density_index, double concentration);
 
 std::vector<std::string> my_coloring_function( Cell* );
 
