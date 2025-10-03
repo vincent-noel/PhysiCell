@@ -392,6 +392,8 @@ void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& no
         dFBAReaction* rxn = this->sbml_model.getReaction(ex_strut.fba_flux_id);
         assert( rxn != nullptr );
     }
+    dFBAReaction* growth_rxn = this->sbml_model.getReaction(this->objective_reaction);
+    assert( growth_rxn != nullptr );
     this->sbml_model.setReactionUpperBound(this->objective_reaction, this->max_growth_rate);
 
     if(this->use_metabolic_death && !this->death_trigger_flux.empty()){
@@ -561,18 +563,22 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
     }
 
     double fba_growth_rate = this->current_growth_rate;
-    // SCALE GROWTH RATE BY this->dfba_time_step
-    double growth_rate = this->current_growth_rate * this->dfba_time_step * hours_to_minutes; // growth_rate 1/h * dt (h)
+    
+    static double epsilon_tolerance = 1e-7;
+    if (fba_growth_rate > epsilon_tolerance) {
+        // SCALE GROWTH RATE BY this->dfba_time_step
+        double growth_rate = fba_growth_rate * this->dfba_time_step * hours_to_minutes; // growth_rate 1/h * dt (h)
 
-    // exact solution (fallback to linear for very small x to avoid exp overhead)
-    const double factor = (std::abs(growth_rate) < 1e-6) ? (1.0 + growth_rate) : std::exp(growth_rate);
+        // exact solution (fallback to linear for very small x to avoid exp overhead)
+        double factor = (std::abs(growth_rate) < 1e-6) ? (1.0 + growth_rate) : std::exp(growth_rate);
+        double safe_factor = std::max(factor, 1e-12);
+        //double volume_increase_ratio = 1.0 + growth_rate;
+        phenotype.volume.multiply_by_ratio( safe_factor );
+        pCell->set_total_volume( phenotype.volume.total );
+        phenotype.geometry.update(pCell, phenotype, this->dfba_time_step);
+    }
 
-    const double safe_factor = std::max(factor, 1e-12);
-
-    //double volume_increase_ratio = 1.0 + growth_rate;
-    phenotype.volume.multiply_by_ratio( safe_factor );
-    pCell->set_total_volume( phenotype.volume.total );
-    phenotype.geometry.update(pCell, phenotype, this->dfba_time_step);
+    
     double solid_fraction = 1.0 - phenotype.volume.fluid_fraction;     
     double solid_volume = phenotype.volume.total * solid_fraction;   
     double cell_dry_weight = solid_volume * this->cell_density ;  
