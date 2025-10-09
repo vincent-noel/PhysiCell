@@ -564,8 +564,8 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
 
     double fba_growth_rate = this->current_growth_rate;
     
-    static double epsilon_tolerance = 1e-7;
-    if (fba_growth_rate > epsilon_tolerance) {
+    
+    if (fba_growth_rate > fba_epsilon_tolerance) {
         // SCALE GROWTH RATE BY this->dfba_time_step
         double growth_rate = fba_growth_rate * this->dfba_time_step * hours_to_minutes; // growth_rate 1/h * dt (h)
 

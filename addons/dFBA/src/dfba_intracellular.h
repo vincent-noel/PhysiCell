@@ -29,6 +29,7 @@ static std::string PhysiCelldFBA_Version = "0.0.1";
 
 static double hours_to_minutes = 1.0 / 60.0;
 static float PI = PhysiCell::PhysiCell_constants::pi;
+static double fba_epsilon_tolerance = 1e-7;
 
 struct KineticParam
 {
