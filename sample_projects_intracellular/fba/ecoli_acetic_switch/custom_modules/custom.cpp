@@ -160,7 +160,7 @@ void setup_tissue(void)
 void post_update_intracellular(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt ){
 
 	
-	pCell->custom_data["growth_rate"] = fba_growth_rate;
+	pCell->custom_data["growth_rate"] = pCell->phenotype.intracellular->get_growth_rate();
 	pCell->custom_data["oxygen_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_o2_e");
 	pCell->custom_data["glucose_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_glc__D_e");
 	pCell->custom_data["acetate_flux"] = pCell->phenotype.intracellular->get_flux_value("R_EX_ac_e");
