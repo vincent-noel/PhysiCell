@@ -29,3 +29,11 @@ user_projects/*
 !user_projects/empty.txt
 Studio.zip
 /studio
+
+output/*.svg
+output/*.xml
+output/*.mat
+output/*.txt
+output/cells.csv
+
+.vscode/
