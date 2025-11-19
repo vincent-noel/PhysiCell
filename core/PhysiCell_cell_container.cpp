@@ -69,7 +69,7 @@
 #include "PhysiCell_constants.h"
 #include "../BioFVM/BioFVM_vector.h"
 #include "PhysiCell_cell.h"
-
+#include "../addons/dFBA/src/dfba_intracellular.h"
 #include <algorithm>
 #include <iterator> 
 
@@ -140,6 +140,7 @@ void Cell_Container::update_all_cells(double t, double phenotype_dt_ , double me
 	static double mechanics_dt_tolerance = 0.001 * mechanics_dt_; 
 
 	// intracellular update. called for every diffusion_dt, but actually depends on the intracellular_dt of each cell (as it can be noisy)
+ 	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 
 	#pragma omp parallel for 
 	for( int i=0; i < (*all_cells).size(); i++ )
@@ -158,6 +159,10 @@ void Cell_Container::update_all_cells(double t, double phenotype_dt_ , double me
 			}
 		}
 	}
+	
+	std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+	PhysiCelldFBA::dFBAIntracellular::compute_time += std::chrono::duration<double>(t1 - t0).count();
+
 	
 	if( time_since_last_cycle > phenotype_dt_ - 0.5 * diffusion_dt_ || !initialzed )
 	{

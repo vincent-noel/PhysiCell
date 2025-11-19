@@ -51,6 +51,7 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 {
  private:
  public:
+	static double compute_time;
 
     double dfba_time_step = PhysiCell::diffusion_dt; 
 

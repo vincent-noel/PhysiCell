@@ -8,6 +8,7 @@
 
 namespace PhysiCelldFBA {
 
+double dFBAIntracellular::compute_time = 0.0;
 dFBAIntracellular::dFBAIntracellular() : Intracellular()
 {
     intracellular_type = "dfba";
