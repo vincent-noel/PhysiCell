@@ -19,6 +19,7 @@
 #include "../../../core/PhysiCell_constants.h"
 
 #include "dfba_Model.h"
+#include "dfba_Reaction.h"
 
 
 using namespace std;
@@ -70,6 +71,8 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 	dFBAModel sbml_model;
 	bool is_initialized = false;
 
+	double liter_micron_cubes_conversion = 1e15; // 1 liter = 1e15 micron^3
+
 	/** \brief map between density IDs and exchange reactions */
 	std::map<std::string, ExchangeFluxData> substrate_exchanges;
 
@@ -96,7 +99,7 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 	void initialize_intracellular_from_pugixml(pugi::xml_node& node);
 	
 	// This function checks if it's time to update the model
-	bool need_update() { return PhysiCell::PhysiCell_globals.current_time >= this->next_dfba_run; }
+	bool need_update() { return std::abs(PhysiCell::PhysiCell_globals.current_time -this->next_dfba_run) <= 0.0001; }
 
 	// This function deals with inheritance from mother to daughter cells
 	void inherit(PhysiCell::Cell* cell){ return;};
@@ -127,6 +130,7 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 			// Run FBA and retrive the solution
 			// dFBASolution solution = this->model.optimize();
 			// this->current_growth_rate = solution.getObjectiveValue();
+
 			this->update();		
 
 			// STEP 3. Update the cell volumne using the growth rate from FBA
@@ -134,7 +138,7 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 			// STEP 5. remove the internalized substrates if needed
 			this->update_dfba_outputs(cell, phenotype, dt);
 
-			this->next_dfba_run += PhysiCell::diffusion_dt;
+			this->next_dfba_run = PhysiCell::PhysiCell_globals.current_time + dfba_time_step;
 
 			// if (phenotype.volume.total	>= 2 * this->reference_volume){
 			// 	cell->flag_for_division();
@@ -200,7 +204,7 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 
 	double get_flux_value(std::string name);
 	double get_growth_rate(){ return this->current_growth_rate; }
-	void print_model();
+	void print_model(PhysiCell::Cell* pCell, double current_time, std::string output_folder = "./output");
 
     // ================  specific to "maboss" ================
 	bool has_variable(std::string name) { return false; }
