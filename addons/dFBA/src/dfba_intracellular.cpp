@@ -443,17 +443,17 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
     // 2500 (um³) * 1.04 (pg/um³) =~ 2600 (pg) ~= 2.3 ng
     // cell.mass.solid = cell.mass.total * (1-fluid_frac) = 780 pg
  
-    
+    // Cell Volume
     double current_volume = phenotype.volume.total;
-
-    std::vector<double> density_vector = pCell->nearest_density_vector(); 
-
     // unitless ~30%
     double solid_fraction = 1 - phenotype.volume.fluid_fraction;     
     // um³ = um³
     double solid_volume = current_volume * solid_fraction;   
     // um³ * pg / um³ = pg
-    double cell_dry_weight = solid_volume * 1e-12 * this->cell_density ;   // cell density in g / ml   
+    double cell_dry_weight = solid_volume * this->cell_density ; 
+    // pg * 1e-12 = g
+    double mass_scaling = cell_dry_weight * 1e-12;
+    
     // r = (3V / 4π))^1/3 (um)
     double radius = cbrt((3.0 * current_volume) / (4.0 * PI)); 
     // um * um = um²
@@ -466,7 +466,7 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
 
     double dV = microenvironment.voxels(pCell->get_current_voxel_index()).volume;
 
-    double mass_scaling = cell_dry_weight;
+    std::vector<double> density_vector = pCell->nearest_density_vector(); 
 
     // Only declare the iterator ONCE per function
     map<std::string, ExchangeFluxData>::iterator it;
@@ -513,6 +513,7 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
 
         // Change sign to use as lower bound of the exchange flux
         double exchange_flux_lb = -1 * uptake_rate;
+        std::cout << "Substrate: " << substrate_name << " Density: " << substrate_conc << " Vmax: " << Vmax << " Km: " << Km << " Max Uptake rate (mmol/gDW/h): " << uptake_rate <<  " Exchange flux LB: " << exchange_flux_lb << std::endl;
         // Updateing the lower bound of the corresponding exchange flux
         this->sbml_model.setReactionLowerBound(ex_strut.fba_flux_id, exchange_flux_lb);
 
@@ -586,10 +587,33 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
     }
 
     
+    // Cell Volume
+    double current_volume = phenotype.volume.total;
+    // unitless ~30%
     double solid_fraction = 1.0 - phenotype.volume.fluid_fraction;     
-    double solid_volume = phenotype.volume.total * solid_fraction;   // [µm³]
+    // um³ = um³
+    double solid_volume = current_volume * solid_fraction;   
+    // um³ * pg / um³ = pg
+    double cell_dry_weight = solid_volume * this->cell_density;
+    
+    // pg * 1e-12 = g
+    pCell->custom_data["cell_dry_weight"] = cell_dry_weight;
+    cell_dry_weight *= 1e-12;
 
-    double cell_dry_weight = solid_volume * 1e-12 * this->cell_density ;  // [gDW]
+
+    
+	
+    float current_growth_rate = this->get_growth_rate();
+    std::cout << "Current growth rate: " << current_growth_rate << std::endl;
+    pCell->custom_data["growth_rate"] = current_growth_rate;
+    float R_biomass_reaction = this->get_flux_value(this->objective_reaction);
+    float biomass_ub = this->sbml_model.getReactionUpperBound("R_biomass_reaction");
+    float biomass_lb = this->sbml_model.getReactionLowerBound("R_biomass_reaction");
+    std::cout << "Biomass reaction flux value: " << R_biomass_reaction << endl;
+	pCell->custom_data["R_biomass_reaction"] = R_biomass_reaction;
+    
+    
+
 
     std::vector<double> density_vector = pCell->nearest_density_vector(); 
     double dV = microenvironment.voxels(pCell->get_current_voxel_index()).volume;
@@ -605,12 +629,21 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
         double Km   = ex_strut.Km.value;
         
         int density_index = ex_strut.density_index;
+        std::string density_name = ex_strut.density_name;
         std::string fba_flux_id = ex_strut.fba_flux_id;
+
+        double substrate_conc = density_vector[ex_strut.density_index]; // mM = mmol/L
+        double total_substrate = substrate_conc * (dV / 1e15); // mmol
         
+        pCell->custom_data[density_name + "_conc"] = substrate_conc;
+		pCell->custom_data[density_name + "_total"] = total_substrate;
+
+
         dFBAReaction* exchange_flux = this->sbml_model.getReaction(fba_flux_id);
         double flux_value =  exchange_flux->getFluxValue(); // mmol/gDW/h
-
-        // std::cout << "FBA flux for substrate " << substrate_name << ": " << flux_value << " mmol/gDW/h" << std::endl;
+        std::cout << "Exchange flux : " << fba_flux_id << " Flux value (mmol/gDW/h): " << flux_value << std::endl;
+        
+        pCell->custom_data[fba_flux_id] = flux_value;
 
         // Rescaling FBA exchanges flux into net_export_rates
         // Net export rates are expressed in substance/time
