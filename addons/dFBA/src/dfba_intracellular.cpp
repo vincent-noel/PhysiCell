@@ -4,6 +4,8 @@
 
 #include <sstream>
 #include <iostream>
+#include <fstream>
+#include <iomanip>
 
 
 namespace PhysiCelldFBA {
@@ -451,9 +453,9 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
     // um³ = um³
     double solid_volume = current_volume * solid_fraction;   
     // um³ * pg / um³ = pg
-    double cell_dry_weight = solid_volume * this->cell_density ;     
+    double cell_dry_weight = solid_volume * 1e-12 * this->cell_density ;   // cell density in g / ml   
     // r = (3V / 4π))^1/3 (um)
-    double radius = cbrt( (3./4. * PI * current_volume) ); 
+    double radius = cbrt((3.0 * current_volume) / (4.0 * PI)); 
     // um * um = um²
     double cell_surface = 4 * PI * pow(radius, 2);
 
@@ -464,24 +466,25 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
 
     double dV = microenvironment.voxels(pCell->get_current_voxel_index()).volume;
 
-    double mass_scaling = cell_dry_weight * 1e-12;
+    double mass_scaling = cell_dry_weight;
 
     // Only declare the iterator ONCE per function
     map<std::string, ExchangeFluxData>::iterator it;
     for(it = this->substrate_exchanges.begin(); it != this->substrate_exchanges.end(); it++)
     {
+        
         std::string substrate_name = it->first;
         ExchangeFluxData ex_strut = it->second;
 
         // geting the amount of substrate
         double substrate_conc = density_vector[ex_strut.density_index];
-        substrate_conc = max(substrate_conc, 0.0);
-        // scaling Vmax ased on cell volume
-        double Vmax = ex_strut.Vmax.value;
-        double Km   = ex_strut.Km.value;
+        substrate_conc = max(substrate_conc, 0.0); // mM 
+        // scaling Vmax based on cell volume
+        double Vmax = ex_strut.Vmax.value; // mmol / gDWcell / hours
+        double Km   = ex_strut.Km.value; // mM 
         
         // using irreversible Michaelis Menten kinetics to estimate the flux bound; should be calculated from density
-        double uptake_rate = (Vmax * substrate_conc) / (Km + substrate_conc); //  mmol / gDWcell / hours
+        double uptake_rate = (Vmax * substrate_conc) / (Km + substrate_conc); //  mmol / gDWcell / hours shoudl 
         
 
         // Here we are simulating what is going to happen in BioFVM after we plug the Net Export Rate (we will rescale it later)
@@ -494,28 +497,32 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
 
         // correct scaling that takes into account the volume units (um³) in BioFVM
         // we are getting the total substrate of the voxel
-        double total_substrate = substrate_conc * dV * 1e-15; // mmol
+        double total_substrate = substrate_conc * dV * liter_micron_cubes_conversion; // mmol
         // check if the we are taking more than what is stored in the voxel
-        double epsilon = 1e-18;
-        if((total_substrate - total_uptake)  < epsilon){
+
+        // std::cout << "Substrate: " << substrate_name << " -- Total substrate in voxel: " << total_substrate << " mmol," << "Total concentration: " << substrate_conc << " mM, Total uptake requested: " << total_uptake << " mmol. Uptake rate: " << uptake_rate << " mmol/gDW/h" << std::endl;
+
+        const double epsilon = 1e-18;
+        if (total_uptake > 0.0 && total_uptake > total_substrate + epsilon) {
+            //std::cout << "Warning: limiting uptake rate for substrate " << substrate_name << " to available amount in the voxel." << std::endl;
+            //std::cout << "\t Total substrate in voxel: " << total_substrate << " mmol, Total uptake requested: " << total_uptake << " mmol." << std::endl;
             uptake_rate = total_substrate / mass_scaling; // mmol/gDW
             uptake_rate /= (dfba_time_step * hours_to_minutes); // mmol/gDW/hours
+            //std::cout << "\t New uptake rate: " << uptake_rate << " mmol/gDW/h" << std::endl;
         }
 
         // Change sign to use as lower bound of the exchange flux
         double exchange_flux_lb = -1 * uptake_rate;
         // Updateing the lower bound of the corresponding exchange flux
         this->sbml_model.setReactionLowerBound(ex_strut.fba_flux_id, exchange_flux_lb);
+
     }
 }
 
 void dFBAIntracellular::update(){
     // Only run dFBA if current_time >= next_dfba_run
-    if (PhysiCell::PhysiCell_globals.current_time < next_dfba_run) {
-        return;
-    }
     dFBASolution solution = this->sbml_model.optimize();
-    next_dfba_run = PhysiCell::PhysiCell_globals.current_time + dfba_time_step;
+    //next_dfba_run = PhysiCell::PhysiCell_globals.current_time + dfba_time_step;
     if (solution.status == "infeasible"){
         //std::cout << "I'm dead from the metabolic point of view" << std::endl;
         this->flag_for_death = true;
@@ -580,9 +587,10 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
 
     
     double solid_fraction = 1.0 - phenotype.volume.fluid_fraction;     
-    double solid_volume = phenotype.volume.total * solid_fraction;   
-    double cell_dry_weight = solid_volume * this->cell_density ;  
-    cell_dry_weight *= 1e-12; // pg * 10^-12 = g
+    double solid_volume = phenotype.volume.total * solid_fraction;   // [µm³]
+
+    double cell_dry_weight = solid_volume * 1e-12 * this->cell_density ;  // [gDW]
+
     std::vector<double> density_vector = pCell->nearest_density_vector(); 
     double dV = microenvironment.voxels(pCell->get_current_voxel_index()).volume;
     // For each substrate exchange, scale net_export_rates by this->dfba_time_step
@@ -602,25 +610,19 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
         dFBAReaction* exchange_flux = this->sbml_model.getReaction(fba_flux_id);
         double flux_value =  exchange_flux->getFluxValue(); // mmol/gDW/h
 
+        // std::cout << "FBA flux for substrate " << substrate_name << ": " << flux_value << " mmol/gDW/h" << std::endl;
+
         // Rescaling FBA exchanges flux into net_export_rates
         // Net export rates are expressed in substance/time
         // flux_value: mmol/gDW/h --> mmol/min
         // net_export_rate (mmol/min) = flux_value / 60 * cell_dry_weight  = mmol/min
-        double net_export_rate = flux_value * cell_dry_weight * hours_to_minutes; // mmol/min
-        //TODO to adapt to voxel size!
+        //double net_export_rate = flux_value * cell_dry_weight * hours_to_minutes; // mmol/min
+
+        double net_export_rate_mmol_per_min = flux_value * cell_dry_weight * hours_to_minutes; // mmol/min
         
-        double substrate_conc = density_vector[ex_strut.density_index]; // mM = mmol/L
-
-        // correct scaling that takes into account the volume units (um³) in BioFVM
-        double total_substrate = substrate_conc * (dV / 1e15); // mmol
-
-        double substrate_consumption = net_export_rate * dfba_time_step * -1;
-
-        /*if(substrate_consumption > total_substrate){
-            std::cout << "**** CellID " << pCell->ID << " Substrate: " << substrate_name << " concentration: " << substrate_conc << " Total substrate: " << total_substrate << " Consumption: " << substrate_consumption << " Net export rate: " << net_export_rate << std::endl;
-        }
-        */
+ 
         /*
+        double substrate_conc = density_vector[ex_strut.density_index]; // mM = mmol/L
         std::cout << " Cell Type: " << pCell->type_name << std::endl;
         std::cout << "\tSubstrate: " << substrate_name << std::endl;
         std::cout << "\tconcentration: " << substrate_conc << std::endl;
@@ -631,17 +633,23 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
         std::cout << "\tNet export rate: " << net_export_rate << std::endl;
         std::cout << "\tFBA Flux " << flux_value << std::endl;
         std::cout << "\tFBA growth rate " << fba_growth_rate << std::endl;
+        if (substrate_name == "lactate" && flux_value > 1.0){
+       }
         */
 
         // correct scaling that takes into account the volume units (liter to um³) in BioFVM 
-        net_export_rate *= 1e15; // BioFVM units are in mM  =  mmol / L whereas dV is in um³ = 1e-15 L
+        net_export_rate_mmol_per_min *= liter_micron_cubes_conversion; // BioFVM units are in mM  =  mmol / L whereas dV is in um³ = 1e-15 L
 
-        phenotype.secretion.net_export_rates[density_index] = net_export_rate;
+        // std::cout << "New net export rate for substrate " << substrate_name << ": " << net_export_rate_mmol_per_min << " mmol/min" << std::endl;
+        phenotype.secretion.net_export_rates[density_index] = net_export_rate_mmol_per_min;
+
+        // phenotype.secretion.net_export_rates[density_index] = net_export_rate;
         pCell->set_internal_uptake_constants(this->dfba_time_step); // Update internal uptake constants based on the new volume and rates
         if (default_microenvironment_options.track_internalized_substrates_in_each_agent)
         {
             phenotype.molecular.internalized_total_substrates[density_index] = 0;
         }
+        print_model(pCell, dt, "./output");
     }
 
     return;
@@ -650,26 +658,105 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
 double dFBAIntracellular::get_flux_value(std::string reaction_name)
 {
         
-    dFBAReaction* exchange_flux = this->sbml_model.getReaction(reaction_name);
-    double flux_value =  exchange_flux->getFluxValue(); 
-    return flux_value;
+    auto it = this->sbml_model.getReaction(reaction_name);
+    if (it != nullptr){
+        return it->getFluxValue();
+    }
+    else{
+        std::cout << "ERROR: Reaction " << reaction_name << " not found in the SBML model." << std::endl;
+        exit(-1);
+    }
 }
 
-void dFBAIntracellular::print_model(){
-    for (auto& m : this->sbml_model.getListOfMetabolites())
-    {
-        std::cout << "Metabolite: " << m->getId() << " " << m->getName() << std::endl;
+void dFBAIntracellular::print_model(PhysiCell::Cell* pCell, double current_time, std::string output_folder){
+    // Create output filename with cell ID and timestamp
+    std::stringstream filename;
+    int cell_id = pCell->ID;
+    filename << output_folder << "/fba_model_cell_" << cell_id 
+             << "_t_" << std::fixed << std::setprecision(2) << current_time << ".txt";
+    
+    std::ofstream outfile(filename.str());
+    if (!outfile.is_open()) {
+        std::cerr << "ERROR: Could not open file for writing: " << filename.str() << std::endl;
+        return;
     }
-    for (auto &r : this->sbml_model.getListOfReactions())
-    {
-        std::cout << "Reaction: " << r->getId() << " " << r->getName() << " " << r->getReactionString(this->sbml_model) << std::endl;
 
-        for (auto& me : r->getMetabolites())
-        {
-            std::cout << "\tMetabolite: " << me.first << " " << me.second << std::endl;
-        }
+    // Header with cell information
+    outfile << "=================================================================" << std::endl;
+    outfile << "FBA MODEL SUMMARY - Cell ID: " << cell_id << std::endl;
+    outfile << "Time: " << current_time << " min" << std::endl;
+    outfile << "SBML Model: " << this->sbml_filename << std::endl;
+    outfile << "=================================================================" << std::endl;
+    outfile << std::endl;
+
+    // Growth parameters
+    outfile << "--- GROWTH PARAMETERS ---" << std::endl;
+    outfile << "Objective Reaction: " << this->objective_reaction << std::endl;
+    outfile << "Current Growth Rate: " << this->current_growth_rate << " 1/h" << std::endl;
+    outfile << "Cell Density: " << this->cell_density << " pg/um³" << std::endl;
+    outfile << "Reference Volume: " << this->reference_volume << " um³" << std::endl;
+    outfile << "dFBA Time Step: " << this->dfba_time_step << " min" << std::endl;
+    outfile << std::endl;
+
+
+    // Substrate exchanges (transport model)
+    std::vector<double> density_vector = pCell->nearest_density_vector(); 
+    
+    outfile << "--- SUBSTRATE EXCHANGES ---" << std::endl;
+    outfile << "Substrate Name\tCurrent concentration\tFBA Flux ID\tKm (mM)\tVmax (mmol/gDW/h)" << std::endl;
+    for (const auto& exchange : this->substrate_exchanges) {
+        const ExchangeFluxData& ex = exchange.second;
+        double substrate_conc = density_vector[ex.density_index]; // mM = mmol/L
+        outfile << ex.density_name << "\t" 
+                << substrate_conc << "\t"
+                << ex.fba_flux_id << "\t"
+                << ex.Km.value << "\t"
+                << ex.Vmax.value << std::endl;
     }
-    // this->sbml_model.getListOfReactions();
+    outfile << std::endl;
+
+    // Metabolites
+    outfile << "--- METABOLITES (" << this->sbml_model.getNumMetabolites() << " total) ---" << std::endl;
+    outfile << "ID\tName" << std::endl;
+    for (const auto& m : this->sbml_model.getListOfMetabolites()) {
+        outfile << m->getId() << "\t" << m->getName() << std::endl;
+    }
+    outfile << std::endl;
+
+    // Reactions with detailed information
+    outfile << "--- REACTIONS (" << this->sbml_model.getNumReactions() << " total) ---" << std::endl;
+    outfile << "Reaction ID\tReaction Name\tLower Bound\tUpper Bound\tFlux Value\tReversible\tObjective Coeff\tReaction String" << std::endl;
+    
+    for (const auto& r : this->sbml_model.getListOfReactions()) {
+        outfile << r->getId() << "\t"
+                << r->getName() << "\t"
+                << r->getLowerBound() << "\t"
+                << r->getUpperBound() << "\t"
+                << r->getFluxValue() << "\t"
+                << (r->reversible() ? "Yes" : "No") << "\t"
+                << r->getObjectiveCoefficient() << "\t"
+                << r->getReactionString(this->sbml_model) << std::endl;
+    }
+    outfile << std::endl;
+
+    // Boundary/Exchange reactions (for easier identification)
+    std::vector<dFBAReaction*> boundary_rxns = this->sbml_model.getListOfBoundaryReactions();
+    if (!boundary_rxns.empty()) {
+        outfile << "--- BOUNDARY/EXCHANGE REACTIONS (" << boundary_rxns.size() << " total) ---" << std::endl;
+        outfile << "Reaction ID\tLower Bound\tUpper Bound\tFlux Value" << std::endl;
+        for (const auto& r : boundary_rxns) {
+            outfile << r->getId() << "\t"
+                    << r->getLowerBound() << "\t"
+                    << r->getUpperBound() << "\t"
+                    << r->getFluxValue() << std::endl;
+        }
+        outfile << std::endl;
+    }
+
+    outfile << "=================================================================" << std::endl;
+    outfile.close();
+    
+    std::cout << "FBA model summary saved to: " << filename.str() << std::endl;
 }
 
 void dFBAIntracellular::save_dFBA(std::string path, std::string index) 

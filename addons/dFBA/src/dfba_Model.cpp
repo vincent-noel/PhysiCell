@@ -373,19 +373,28 @@ void dFBAModel::readSBMLModel(const char* sbmlFileName)
         if ( rxnFbc )
         {
             // Getting dFBAReaction's upper and lower bounds
-            const std::string lbId = rxnFbc->getLowerFluxBound();
+            std::string lbId = rxnFbc->getLowerFluxBound();
             Parameter* lbParam = listOfParameters->get(lbId);
             if (lbParam) {
                 double lb = lbParam->getValue();
                 reaction->setLowerBound(lb);
             }
+            else {
+                std::cout << "WARNING: Lower bound parameter " << lbId << " not found for reaction " << sbml_reaction->getId() << std::endl;
+            }
 
-            const std::string ubId = rxnFbc->getUpperFluxBound();
+            std::string ubId = rxnFbc->getUpperFluxBound();
             Parameter* ubParam = listOfParameters->get(ubId);
             if (ubParam) {
                 double ub = ubParam->getValue();
                 reaction->setUpperBound(ub);
             }
+            else {
+                std::cout << "WARNING: Upper bound parameter " << ubId << " not found for reaction " << sbml_reaction->getId() << std::endl;
+            }
+        }
+        else {
+            std::cout << "WARNING: No FBC plugin found for reaction " << sbml_reaction->getId() << std::endl;
         }
         int numReactans = sbml_reaction->getNumReactants();
         for(int j = 0; j < numReactans; j++)
@@ -511,6 +520,13 @@ void dFBAModel::initProblem()
     delete[] row_ub;
     delete[] objective;
 
+    this->problem.setPrimalTolerance(1e-7);
+    this->problem.setDualTolerance(1e-7);
+    this->problem.scaling(3);
+    this->problem.setMaximumIterations(10000);
+    this->problem.setLogLevel(0);
+    this->problem.initialSolve();
+
     this->is_initialized = true;
 }
 
@@ -528,20 +544,8 @@ void dFBAModel::writeProblem(const char *filename)
 
 dFBASolution dFBAModel::optimize()
 {
-    this->problem.setLogLevel(0);
-    this->problem.initialSolve();
 
-    int feasCheck = problem.primalFeasible();
-    if (feasCheck != 0) {
-        //std::cerr << "Problem infeasible BEFORE optimization. Status: " << feasCheck << "\n";
-    }
-
-    this->problem.setPrimalTolerance(1e-8);
-    this->problem.setDualTolerance(1e-8);
-    this->problem.scaling(1);
-    this->problem.setMaximumIterations(10000);
-
-    this->problem.primal();
+    this->problem.dual();
     bool isOptimal = problem.isProvenOptimal();
 
     solution.fluxes.clear();

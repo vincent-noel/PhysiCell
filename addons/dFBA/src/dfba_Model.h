@@ -30,8 +30,9 @@ class dFBAReaction;
 
 class dFBAModel
 {
-	private:
+	public:
 		/** \brief Constraint-Based Model Class to perform FBA*/
+		bool initialized =false;
 
 		std::string id;
 
