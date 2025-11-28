@@ -21,6 +21,7 @@ addons/dFBA/ext/*
 addons/dFBA/test/*.o
 addons/dFBA/test/test_*
 
+venv/
 .venv
 pmb_debug.log
 project
@@ -37,3 +38,5 @@ output/*.txt
 output/cells.csv
 
 .vscode/
+
+notebooks/
