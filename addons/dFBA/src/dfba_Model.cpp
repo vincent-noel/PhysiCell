@@ -229,6 +229,9 @@ void dFBAModel::setReactionUpperBound(std::string rId, double upperBound)
         int colIdx = this->reactionsIndexer[rId];
         this->problem.setColumnUpper(colIdx, upperBound);
     }
+    else{
+        std::cerr << "Reaction with ID " << rId << " not found in the model." << std::endl;
+    }
 }
 
 double dFBAModel::getReactionLowerBound(std::string rId) 
@@ -245,6 +248,9 @@ void dFBAModel::setReactionLowerBound(std::string rId, double lowerBound)
         rxn->setLowerBound(lowerBound);
         int colIdx = this->reactionsIndexer[rId];
         this->problem.setColumnLower(colIdx, lowerBound);
+    }
+    else{
+        std::cerr << "Reaction with ID " << rId << " not found in the model." << std::endl;
     }
 
 }
