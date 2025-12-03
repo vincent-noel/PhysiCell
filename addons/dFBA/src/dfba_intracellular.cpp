@@ -682,7 +682,7 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
         {
             phenotype.molecular.internalized_total_substrates[density_index] = 0;
         }
-        print_model(pCell, dt, "./output");
+        // print_model(pCell, dt, "./output");
     }
 
     return;

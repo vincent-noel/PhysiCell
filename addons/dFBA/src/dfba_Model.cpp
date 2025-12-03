@@ -257,6 +257,10 @@ void dFBAModel::setReactionLowerBound(std::string rId, double lowerBound)
 
 void dFBAModel::addReaction(dFBAReaction* rxn)
 {
+    if (this->is_initialized) {
+        std::cerr << "CRITICAL ERROR: Cannot add reactions after model initialization." << std::endl;
+        exit(-1);
+    }
     if (!this->hasReaction( rxn->getId() ))
     {
         this->reactions.push_back(rxn);
@@ -514,6 +518,8 @@ void dFBAModel::initProblem()
     this->problem.loadProblem(matrix, col_lb, col_ub, objective, row_lb, row_ub);
     this->problem.setOptimizationDirection(-1);
 
+    this->problem.setPerturbation(50); // 50 is a standard default for perturbation. It means that the perturbation is always applied. 100 is the default value (automatic)
+
     delete[] col_lb;
     delete[] col_ub;
     delete[] row_lb;
@@ -546,6 +552,10 @@ dFBASolution dFBAModel::optimize()
 {
 
     this->problem.dual();
+    // If Dual fails, try Primal (more robust from scratch) --> if numerical issue occurs, try primal to make sure the cell is really dead
+    if (this->problem.status() != 0) { 
+        this->problem.primal();
+    }
     bool isOptimal = problem.isProvenOptimal();
 
     solution.fluxes.clear();
