@@ -170,6 +170,34 @@ def ensure_chemotactic_sensitivities(cell_def, substrate_name):
 
 
 # ----------------------
+# Volume update utility
+# ----------------------
+def set_cell_volume(cell_def, total_volume=None, nuclear_volume=None):
+    """
+    Ensure phenotype->volume exists and update total and nuclear volumes if provided.
+    """
+    phenotype = cell_def.find("./phenotype")
+    if phenotype is None:
+        phenotype = etree.SubElement(cell_def, "phenotype")
+
+    volume = phenotype.find("volume")
+    if volume is None:
+        volume = etree.SubElement(phenotype, "volume")
+
+    if total_volume is not None:
+        total_node = volume.find("total")
+        if total_node is None:
+            total_node = etree.SubElement(volume, "total", units="micron^3")
+        total_node.text = str(total_volume)
+
+    if nuclear_volume is not None:
+        nuclear_node = volume.find("nuclear")
+        if nuclear_node is None:
+            nuclear_node = etree.SubElement(volume, "nuclear", units="micron^3")
+        nuclear_node.text = str(nuclear_volume)
+
+
+# ----------------------
 # Intracellular dfba insertion
 # ----------------------
 def make_exchange_block_xml(exchange_config):
@@ -226,6 +254,7 @@ def add_intracellular_dfba(cell_def, sbml_path, model_config):
     
     cell_density = growth_config.get("cell_density", "1.04")
     reference_volume = growth_config.get("reference_volume", "2494")
+    nuclear_volume = growth_config.get("nuclear_volume", 0.0)
     max_growth_rate = growth_config.get("max_growth_rate", "0.86")
     objective_reaction = growth_config.get("objective_reaction", "R_Biomass")
     
@@ -453,7 +482,7 @@ def validate_yaml_config(config, config_yaml_path, sbml_folder):
             if not isinstance(growth, dict):
                 errors.append(f"Model '{model_name}': 'growth_model' must be a dictionary")
             else:
-                numeric_fields = ["cell_density", "reference_volume", "max_growth_rate"]
+                numeric_fields = ["cell_density", "reference_volume", "max_growth_rate", "nuclear_volume"]
                 for field in numeric_fields:
                     if field in growth:
                         try:
@@ -650,6 +679,13 @@ def update_config_with_dfba(template_xml_path,
         new_cell.set("ID", str(next_id))
         print(f"[INFO] Assigned ID={next_id} to cell_definition '{new_name}'")
         next_id += 1
+
+        # Update volume block from YAML growth_model (reference_volume -> total, nuclear_volume -> nuclear)
+        growth_cfg = model_config.get("growth_model", {})
+        total_volume = growth_cfg.get("reference_volume")
+        nuclear_volume = growth_cfg.get("nuclear_volume", 0.0)
+        if total_volume is not None:
+            set_cell_volume(new_cell, total_volume=total_volume, nuclear_volume=nuclear_volume)
 
         # Add dfba intracellular according to model configuration
         add_intracellular_dfba(new_cell, sbml_path_abs, model_config)

@@ -73,7 +73,8 @@ models:
     # Growth model parameters (optional - will use hardcoded defaults if not specified)
     growth_model:
       cell_density: 1.04              # Cell density (g/ml)
-      reference_volume: 2494          # Reference volume for cell division (pg)
+      reference_volume: 1.03          # Reference volume for cell division (pg)
+      nuclear_volume: 0.0            # Nuclear volume (pg)
       max_growth_rate: 0.86           # Maximum growth rate (1/min)
       objective_reaction: "R_Biomass"  # Objective reaction ID from SBML model
     
