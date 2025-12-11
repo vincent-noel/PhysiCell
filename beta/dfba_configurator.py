@@ -175,7 +175,7 @@ def ensure_chemotactic_sensitivities(cell_def, substrate_name):
 def make_exchange_block_xml(exchange_config):
     """Create an exchange XML block from a YAML exchange configuration."""
     ex = etree.Element("exchange", substrate=str(exchange_config["substrate"]))
-    etree.SubElement(ex, "fba_exchange").text = str(exchange_config["fba_exchange"])
+    etree.SubElement(ex, "fba_flux").text = str(exchange_config["fba_flux"])
     etree.SubElement(ex, "Km", units="mM").text = str(exchange_config["Km"])
     etree.SubElement(ex, "Vmax", units="fmol/pg DW cell/min").text = str(exchange_config["Vmax"])
     return ex
@@ -238,6 +238,15 @@ def add_intracellular_dfba(cell_def, sbml_path, model_config):
     death_config = model_config.get("death_model", {})
     enabled = death_config.get("enabled", False) if death_config else False
     death_model = etree.SubElement(intracellular, "death_model", enabled=str(enabled).lower())
+    death_type = death_config.get("death_type", "necrosis")
+    death_trigger_flux = death_config.get("death_trigger_flux", "0.0")
+    death_flux_threshold = death_config.get("death_flux_threshold", "0.0")
+    death_rate_increase = death_config.get("death_rate_increase", "1.67e-5")
+
+    etree.SubElement(death_model, "death_type", units="g/ml").text = str(death_type)
+    etree.SubElement(death_model, "death_trigger_flux", units="1/min").text = str(death_trigger_flux)
+    etree.SubElement(death_model, "death_flux_threshold").text = str(death_flux_threshold)
+    etree.SubElement(death_model, "death_rate_increase").text = str(death_rate_increase)
 
 
 # ----------------------
@@ -413,7 +422,7 @@ def validate_yaml_config(config, config_yaml_path, sbml_folder):
                         continue
                     
                     # Check required exchange fields
-                    required_fields = ["substrate", "fba_exchange", "Km", "Vmax"]
+                    required_fields = ["substrate", "fba_flux", "Km", "Vmax"]
                     for field in required_fields:
                         if field not in exchange:
                             errors.append(f"Model '{model_name}': exchange {idx} missing required field '{field}'")
@@ -481,6 +490,15 @@ def validate_yaml_config(config, config_yaml_path, sbml_folder):
                 if "enabled" in death:
                     if not isinstance(death["enabled"], bool):
                         errors.append(f"Model '{model_name}': death_model 'enabled' must be a boolean")
+                if "death_type" in death:
+                    if not isinstance(death["death_type"], str):
+                        errors.append(f"Model '{model_name}': death_model 'death_type' must be a string")
+                for field in ["death_trigger_flux", "death_flux_threshold", "death_rate_increase"]:
+                    if field in death:
+                        try:
+                            float(death[field])
+                        except (ValueError, TypeError):
+                            errors.append(f"Model '{model_name}': death_model '{field}' must be a number")
     
     
     # Check for substrates in exchanges that aren't defined
