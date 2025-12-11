@@ -93,6 +93,16 @@ int dFBAIntracellular::parse_transport_model(pugi::xml_node& node)
 	{
 		string density_name = node_exchange.attribute( "substrate" ).value(); 
         int density_index = microenvironment.find_density_index( density_name ); 
+
+        if (density_index == -1)
+        {
+            std::cout << "Error: attempted to set secretion/uptake/export for \""; 
+            std::cout << density_name << "\", which was not found in the microenvironment." << std::endl;
+            std::cout << "Please double-check your substrate name in the config file." << std::endl;
+            std::cout << std::endl;
+            exit(-1); 
+        }
+
         std::string actual_name = microenvironment.density_names[ density_index ]; 
 			
         // error check 
@@ -122,7 +132,7 @@ int dFBAIntracellular::parse_transport_model(pugi::xml_node& node)
 		if( node_Km )
 		{
             Km.name = "Km";
-            Km.untis = node_Km.attribute("units").value();
+            Km.units = node_Km.attribute("units").value();
             Km.value = PhysiCell::xml_get_my_double_value(node_Km);
             assert(Km.value > 0);
             
@@ -139,7 +149,7 @@ int dFBAIntracellular::parse_transport_model(pugi::xml_node& node)
 		if( node_Vmax )
 		{
             Vmax.name = "Vmax";
-            Vmax.untis = node_Vmax.attribute("units").value();
+            Vmax.units = node_Vmax.attribute("units").value();
             Vmax.value = PhysiCell::xml_get_my_double_value(node_Vmax);
             assert(Vmax.value >= 0);
             
@@ -513,7 +523,7 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
 
         // Change sign to use as lower bound of the exchange flux
         double exchange_flux_lb = -1 * uptake_rate;
-        std::cout << "Substrate: " << substrate_name << " Density: " << substrate_conc << " Vmax: " << Vmax << " Km: " << Km << " Max Uptake rate (mmol/gDW/h): " << uptake_rate <<  " Exchange flux LB: " << exchange_flux_lb << std::endl;
+        // std::cout << "Substrate: " << substrate_name << " Density: " << substrate_conc << " Vmax: " << Vmax << " Km: " << Km << " Max Uptake rate (mmol/gDW/h): " << uptake_rate <<  " Exchange flux LB: " << exchange_flux_lb << std::endl;
         // Updateing the lower bound of the corresponding exchange flux
         this->sbml_model.setReactionLowerBound(ex_strut.fba_flux_id, exchange_flux_lb);
 
@@ -597,20 +607,20 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
     double cell_dry_weight = solid_volume * this->cell_density;
     
     // pg * 1e-12 = g
-    pCell->custom_data["cell_dry_weight"] = cell_dry_weight;
+    // pCell->custom_data["cell_dry_weight"] = cell_dry_weight;
     cell_dry_weight *= 1e-12;
 
 
     
 	
     float current_growth_rate = this->get_growth_rate();
-    std::cout << "Current growth rate: " << current_growth_rate << std::endl;
+    // std::cout << "Current growth rate: " << current_growth_rate << std::endl;
     pCell->custom_data["growth_rate"] = current_growth_rate;
-    float R_biomass_reaction = this->get_flux_value(this->objective_reaction);
-    float biomass_ub = this->sbml_model.getReactionUpperBound("R_biomass_reaction");
-    float biomass_lb = this->sbml_model.getReactionLowerBound("R_biomass_reaction");
-    std::cout << "Biomass reaction flux value: " << R_biomass_reaction << endl;
-	pCell->custom_data["R_biomass_reaction"] = R_biomass_reaction;
+    // float R_biomass_reaction = this->get_flux_value(this->objective_reaction);
+    // float biomass_ub = this->sbml_model.getReactionUpperBound("R_biomass_reaction");
+    // float biomass_lb = this->sbml_model.getReactionLowerBound("R_biomass_reaction");
+    // std::cout << "Biomass reaction flux value: " << R_biomass_reaction << endl;
+	// pCell->custom_data["R_biomass_reaction"] = R_biomass_reaction;
     
     
 
@@ -635,15 +645,15 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
         double substrate_conc = density_vector[ex_strut.density_index]; // mM = mmol/L
         double total_substrate = substrate_conc * (dV / 1e15); // mmol
         
-        pCell->custom_data[density_name + "_conc"] = substrate_conc;
-		pCell->custom_data[density_name + "_total"] = total_substrate;
+        // pCell->custom_data[density_name + "_conc"] = substrate_conc;
+		// pCell->custom_data[density_name + "_total"] = total_substrate;
 
 
         dFBAReaction* exchange_flux = this->sbml_model.getReaction(fba_flux_id);
         double flux_value =  exchange_flux->getFluxValue(); // mmol/gDW/h
-        std::cout << "Exchange flux : " << fba_flux_id << " Flux value (mmol/gDW/h): " << flux_value << std::endl;
+        // std::cout << "Exchange flux : " << fba_flux_id << " Flux value (mmol/gDW/h): " << flux_value << std::endl;
         
-        pCell->custom_data[fba_flux_id] = flux_value;
+        // pCell->custom_data[fba_flux_id] = flux_value;
 
         // Rescaling FBA exchanges flux into net_export_rates
         // Net export rates are expressed in substance/time
