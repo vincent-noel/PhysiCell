@@ -184,8 +184,8 @@ int main( int argc, char* argv[] )
 	}
 	
 	// main loop
-	#pragma omp parallel for
-	for(int n=0; n < all_cells->size(); n++)
+	//#pragma omp parallel for
+	/* for(int n=0; n < all_cells->size(); n++)
 	{
 		// std::cout << "Updating " << pCell->ID << " dFBA model bounds" << std::endl;
 		PhysiCell::Cell* pCell = (*all_cells)[n];
@@ -193,7 +193,7 @@ int main( int argc, char* argv[] )
 		std::string biomass = intracell_model->objective_reaction;
 		dFBAModel& sbml_model = intracell_model->sbml_model;
 		sbml_model.setReactionUpperBound(biomass, 0.0);
-	}
+	} */
 	
 	double start_growing_time = parameters.doubles("start_growing_time");
 	double reinject_oxygen_time = parameters.doubles("reinject_oxygen_time");
@@ -257,7 +257,7 @@ int main( int argc, char* argv[] )
 			}
 
 			// Lets make E. coli in non-growth state until 3h
-			if ( PhysiCell_globals.current_time >= start_growing_time ){
+			/* if ( PhysiCell_globals.current_time >= start_growing_time ){
 				double val = 0;
 				double current_growth = 0;
 				#pragma omp parallel for
@@ -275,7 +275,7 @@ int main( int argc, char* argv[] )
 				}
 				//start_growing_time = PhysiCell_settings.max_time + 100;
 				current_growth /= all_cells->size();
-			}
+			} */
 
 			PhysiCell_globals.current_time += diffusion_dt;
 		}

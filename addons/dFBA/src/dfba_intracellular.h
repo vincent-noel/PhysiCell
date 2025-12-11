@@ -35,7 +35,7 @@ static double fba_epsilon_tolerance = 1e-7;
 struct KineticParam
 {
 	string name;
-	string untis;
+	string units;
 	float value;
 };
 
