@@ -217,7 +217,12 @@ dFBAReaction* dFBAModel::getReaction(std::string rId)
 double dFBAModel::getReactionUpperBound(std::string rId) 
 {
     dFBAReaction* rxn = this->getReaction(rId);
-    return rxn->getUpperBound();
+    if (rxn)
+        return rxn->getUpperBound();
+    else {
+        std::cerr << "Error: Reaction " << rId << " not found in getReactionUpperBound" << std::endl;
+        return 0.0;
+    }
 }
 
 void dFBAModel::setReactionUpperBound(std::string rId, double upperBound)
@@ -237,7 +242,12 @@ void dFBAModel::setReactionUpperBound(std::string rId, double upperBound)
 double dFBAModel::getReactionLowerBound(std::string rId) 
 {
     dFBAReaction* rxn = this->getReaction(rId);
-    return rxn->getLowerBound();
+    if (rxn)
+        return rxn->getLowerBound();
+    else {
+        std::cerr << "Error: Reaction " << rId << " not found in getReactionLowerBound" << std::endl;
+        return 0.0;
+    }
 }
 
 void dFBAModel::setReactionLowerBound(std::string rId, double lowerBound)
@@ -552,10 +562,10 @@ dFBASolution dFBAModel::optimize()
 {
 
     this->problem.dual();
-    // If Dual fails, try Primal (more robust from scratch) --> if numerical issue occurs, try primal to make sure the cell is really dead
+/*     // If Dual fails, try Primal (more robust from scratch) --> if numerical issue occurs, try primal to make sure the cell is really dead
     if (this->problem.status() != 0) { 
         this->problem.primal();
-    }
+    } */
     bool isOptimal = problem.isProvenOptimal();
 
     solution.fluxes.clear();
