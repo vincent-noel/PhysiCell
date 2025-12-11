@@ -68,9 +68,9 @@ def find_template_cell(root, template_name=None):
 # ----------------------
 # Microenvironment utilities
 # ----------------------
-def make_microenv_variable(name, diff=50000.0, decay=0.0, init=0.0):
+def make_microenv_variable(name, var_id, diff=50000.0, decay=0.0, init=0.0):
     var = etree.Element("variable", name=name, units="dimensionless")
-    var.set("ID", "-1")
+    var.set("ID", str(var_id))
     phys = etree.SubElement(var, "physical_parameter_set")
     etree.SubElement(phys, "diffusion_coefficient", units="micron^2/min").text = str(diff)
     etree.SubElement(phys, "decay_rate", units="1/min").text = str(decay)
@@ -281,58 +281,118 @@ def add_intracellular_dfba(cell_def, sbml_path, model_config):
 # ----------------------
 # Cell interactions matrix update
 # ----------------------
-def ensure_cell_interactions_for_all(cell_def, all_cell_names):
+def ensure_cell_interactions_for_all(cell_def, all_cell_names, verbose=False):
     """
-    For a single cell_definition, ensure its cell_interactions section contains
-    phagocytosis/attack/fusion/transformation entries for every name in all_cell_names.
-    Missing entries are added with 0.0.
+    Clean and update `cell_interactions` and `cell_transformations` for a
+    single `cell_definition`.
+
+    Behavior:
+    - Remove per-cell interaction entries (phagocytosis/attack/fusion) that
+      reference cells not present in `all_cell_names`.
+    - Preserve existing entries for cells that are defined.
+    - Ensure a self-entry exists for phagocytosis/attack/fusion with value
+      "0.0" if missing.
+    - Replace `cell_transformations` with a single self-transformation entry
+      with rate "0.0".
+
+    Args:
+        cell_def: XML element for the `cell_definition` being updated.
+        all_cell_names: iterable of currently defined cell names.
     """
-    ci = cell_def.find("cell_interactions")
-    if ci is None:
-        ci = etree.SubElement(cell_def, "cell_interactions")
-        # create some standard fields with defaults
-        etree.SubElement(ci, "apoptotic_phagocytosis_rate", units="1/min").text = "0.0"
-        etree.SubElement(ci, "necrotic_phagocytosis_rate", units="1/min").text = "0.0"
-        etree.SubElement(ci, "other_dead_phagocytosis_rate", units="1/min").text = "0.0"
+    defined_cell_set = set(all_cell_names)
+    cell_name = cell_def.get("name")
 
-    # live_phagocytosis_rates -> phagocytosis_rate name="X"
-    lpr = ci.find("live_phagocytosis_rates")
-    if lpr is None:
-        lpr = etree.SubElement(ci, "live_phagocytosis_rates")
-    existing = {n.get("name") for n in lpr.findall("phagocytosis_rate")}
-    for name in all_cell_names:
-        if name not in existing:
-            etree.SubElement(lpr, "phagocytosis_rate", name=name, units="1/min").text = "0.0"
+    # Merge any existing cell_interactions blocks (some templates contain
+    # multiple `cell_interactions` elements). Collect per-cell entries so we
+    # can preserve values for defined cells, then remove duplicates and write
+    # a single canonical block.
+    collected = {
+        'phagocytosis_rate': {},
+        'attack_rate': {},
+        'fusion_rate': {}
+    }
 
-    # attack_rates -> attack_rate name="X"
-    ar = ci.find("attack_rates")
-    if ar is None:
-        ar = etree.SubElement(ci, "attack_rates")
-    existing_attack = {n.get("name") for n in ar.findall("attack_rate")}
-    for name in all_cell_names:
-        if name not in existing_attack:
-            etree.SubElement(ar, "attack_rate", name=name, units="1/min").text = "0.0"
+    # find all occurrences anywhere under this cell_definition (including nested)
+    ci_nodes = cell_def.findall('.//cell_interactions')
+    if ci_nodes:
+        if verbose:
+            print(f"[DEBUG] Found {len(ci_nodes)} existing 'cell_interactions' blocks for cell '{cell_name}'")
+        for node in ci_nodes:
+            # collect phagocytosis_rate
+            lpr_node = node.find('live_phagocytosis_rates')
+            if lpr_node is not None:
+                for child in lpr_node.findall('phagocytosis_rate'):
+                    n = child.get('name')
+                    if n and n in defined_cell_set:
+                        collected['phagocytosis_rate'][n] = child.text if child.text is not None else '0.0'
+            # collect attack_rate
+            ar_node = node.find('attack_rates')
+            if ar_node is not None:
+                for child in ar_node.findall('attack_rate'):
+                    n = child.get('name')
+                    if n and n in defined_cell_set:
+                        collected['attack_rate'][n] = child.text if child.text is not None else '0.0'
+            # collect fusion_rate
+            fr_node = node.find('fusion_rates')
+            if fr_node is not None:
+                for child in fr_node.findall('fusion_rate'):
+                    n = child.get('name')
+                    if n and n in defined_cell_set:
+                        collected['fusion_rate'][n] = child.text if child.text is not None else '0.0'
+        # remove all existing nodes to avoid duplicates — remove from each node's parent
+        for node in ci_nodes:
+            parent = node.getparent()
+            if parent is not None:
+                parent.remove(node)
 
-    # fusion_rates -> fusion_rate name="X"
-    fr = ci.find("fusion_rates")
-    if fr is None:
-        fr = etree.SubElement(ci, "fusion_rates")
-    existing_fusion = {n.get("name") for n in fr.findall("fusion_rate")}
-    for name in all_cell_names:
-        if name not in existing_fusion:
-            etree.SubElement(fr, "fusion_rate", name=name, units="1/min").text = "0.0"
+    # Create a single canonical cell_interactions block
+    ci = etree.SubElement(cell_def, 'cell_interactions')
+    for field in ('apoptotic_phagocytosis_rate', 'necrotic_phagocytosis_rate', 'other_dead_phagocytosis_rate'):
+        etree.SubElement(ci, field, units='1/min').text = '0.0'
 
-    # transformation_rates -> transformation_rate name="X"
-    ct = cell_def.find("cell_transformations")
-    if ct is None:
-        ct = etree.SubElement(cell_def, "cell_transformations")
-    tr = ct.find("transformation_rates")
-    if tr is None:
-        tr = etree.SubElement(ct, "transformation_rates")
-    existing_tr = {n.get("name") for n in tr.findall("transformation_rate")}
-    for name in all_cell_names:
-        if name not in existing_tr:
-            etree.SubElement(tr, "transformation_rate", name=name, units="1/min").text = "0.0"
+    # Helper to build a block from collected entries (and ensure self-entry)
+    def _build_block(parent, block_tag, child_tag, collected_map):
+        block = etree.SubElement(parent, block_tag)
+        # add entries from all defined cells in sorted order for reproducibility
+        for name in sorted(defined_cell_set):
+            val = collected_map.get(name, None)
+            if val is None:
+                # if no previous value, default to 0.0
+                val = '0.0'
+            etree.SubElement(block, child_tag, name=name, units='1/min').text = str(val)
+        return block
+
+    lpr = _build_block(ci, 'live_phagocytosis_rates', 'phagocytosis_rate', collected['phagocytosis_rate'])
+    ar = _build_block(ci, 'attack_rates', 'attack_rate', collected['attack_rate'])
+    fr = _build_block(ci, 'fusion_rates', 'fusion_rate', collected['fusion_rate'])
+
+    if verbose:
+        print(f"[DEBUG] Built unified 'cell_interactions' for '{cell_name}': lpr={list(collected['phagocytosis_rate'].keys())}, ar={list(collected['attack_rate'].keys())}, fr={list(collected['fusion_rate'].keys())}")
+
+    # remove any existing cell_transformations anywhere under this cell_definition
+    for ct in list(cell_def.findall('.//cell_transformations')):
+        parent = ct.getparent()
+        if parent is not None:
+            parent.remove(ct)
+    ct = etree.SubElement(cell_def, "cell_transformations")
+    tr = etree.SubElement(ct, "transformation_rates")
+    if cell_name:
+        etree.SubElement(tr, "transformation_rate", name=cell_name, units="1/min").text = "0.0"
+
+    # Clean and rebuild cell_adhesion_affinities with only a self-entry
+    for caa in list(cell_def.findall('.//cell_adhesion_affinities')):
+        parent = caa.getparent()
+        if parent is not None:
+            parent.remove(caa)
+    
+    # Find the mechanics block where cell_adhesion_affinities should live
+    mechanics = cell_def.find('.//mechanics')
+    if mechanics is not None:
+        caa = etree.SubElement(mechanics, "cell_adhesion_affinities")
+        if cell_name:
+            etree.SubElement(caa, "cell_adhesion_affinity", name=cell_name).text = "1"
+        if verbose:
+            print(f"[DEBUG] Rebuilt 'cell_adhesion_affinities' for '{cell_name}' with self-entry")
 
 
 # ----------------------
@@ -572,7 +632,9 @@ def update_config_with_dfba(template_xml_path,
                            sbml_folder,
                            template_cell_name,
                            cell_prefix="",
-                           keep_existing_cells=False):
+                           keep_existing_cells=False,
+                           keep_existing_densities=False,
+                           verbose=False):
     """
     Update PhysiCell config with dFBA models from YAML configuration.
     
@@ -602,16 +664,50 @@ def update_config_with_dfba(template_xml_path,
     
     # Build substrate configuration dictionary
     substrate_configs = {}
+    global_substrates = set()
     if "substrates" in config:
         for sub_config in config["substrates"]:
             name = sub_config.get("name")
+            global_substrates.add(name)
             if name:
                 substrate_configs[name] = {
                     "diffusion_coefficient": sub_config.get("diffusion_coefficient"),
                     "decay_rate": sub_config.get("decay_rate"),
                     "initial_condition": sub_config.get("initial_condition", 0.0)
                 }
+    global_substrates_sorted = sorted(global_substrates)
     
+    # Ensure microenvironment contains all substrates
+    microenv = root.find(".//microenvironment_setup")
+    if microenv is None:
+        raise ValueError("Template missing <microenvironment_setup> section.")
+
+    # If we're not keeping existing densities, remove all current <variable> entries
+    existing_vars = set()
+    if not keep_existing_densities:
+        vars_found = microenv.findall("variable")
+        for v in vars_found:
+            microenv.remove(v)
+        if vars_found:
+            print(f"[INFO] Removed {len(vars_found)} existing microenvironment variable(s) (densities) because keep_existing_densities=False")
+    else:
+        existing_vars = {v.get("name") for v in microenv.findall("variable")}
+    
+    new_id = len(existing_vars)
+    for s in global_substrates_sorted:
+        if s not in existing_vars:
+            # Get substrate-specific configuration or use hardcoded defaults
+            sub_config = substrate_configs.get(s, {})
+            diff = sub_config.get("diffusion_coefficient", 50000.0)
+            decay = sub_config.get("decay_rate", 0.0)
+            init = sub_config.get("initial_condition", 0.0)
+            
+            print(f"[INFO] Adding microenvironment variable for substrate '{s}' "
+                  f"(diffusion={diff}, decay={decay}, init={init})")
+            microenv.append(make_microenv_variable(s, new_id, diff=diff, decay=decay, init=init))
+            new_id += 1
+            existing_vars.add(s)
+
 
     # Find template cell_definition
     template_cell = find_template_cell(root, template_cell_name)
@@ -644,7 +740,7 @@ def update_config_with_dfba(template_xml_path,
         print(f"[INFO] Keeping existing cell_definitions (found {len(existing_cells)} cell_definition(s)), next ID will be {next_id}")
 
     created_cell_names = []
-    global_substrates = set()
+    
 
     # For each model: clone template and customize
     for model_name, model_config in models.items():
@@ -693,7 +789,7 @@ def update_config_with_dfba(template_xml_path,
         # Collect all substrates from exchanges
         exchanges = model_config.get("exchanges", [])
         for exchange in exchanges:
-            global_substrates.add(exchange["substrate"])
+            assert exchange["substrate"] in global_substrates
 
         # Ensure secretion entries for all substrates in full parameter table (global list)
         # We'll gather global list later, but for now accumulate created cell names and add later
@@ -710,29 +806,15 @@ def update_config_with_dfba(template_xml_path,
     # Now we have appended new cell_definitions; compute full list of cell names (existing + created)
     all_cell_defs = [cd.get("name") for cd in cdefs_parent.findall("cell_definition")]
     all_cell_names = list(dict.fromkeys(all_cell_defs))  # preserve order, deduplicate
+    if verbose:
+        print(f"[DEBUG] Final cell_definitions (all_cell_names) = {all_cell_names}")
 
-    # Ensure microenvironment contains all substrates
-    microenv = root.find(".//microenvironment_setup")
-    if microenv is None:
-        raise ValueError("Template missing <microenvironment_setup> section.")
-    existing_vars = {v.get("name") for v in microenv.findall("variable")}
-    global_substrates_sorted = sorted(global_substrates)
-    for s in global_substrates_sorted:
-        if s not in existing_vars:
-            # Get substrate-specific configuration or use hardcoded defaults
-            sub_config = substrate_configs.get(s, {})
-            diff = sub_config.get("diffusion_coefficient", 50000.0)
-            decay = sub_config.get("decay_rate", 0.0)
-            init = sub_config.get("initial_condition", 0.0)
-            
-            print(f"[INFO] Adding microenvironment variable for substrate '{s}' "
-                  f"(diffusion={diff}, decay={decay}, init={init})")
-            microenv.insert(0, make_microenv_variable(s, diff=diff, decay=decay, init=init))
-            existing_vars.add(s)
-
+    
     # For each cell_def (both original template and new ones) ensure secretion and chemotactic sensitivities and cell interactions
     for cell in cdefs_parent.findall("cell_definition"):
         name = cell.get("name")
+        if verbose:
+            print(f"[DEBUG] Processing cell_definition: '{name}'")
         # ensure secretion contains all substrates
         for s in global_substrates_sorted:
             ensure_secretion_has_substrate(cell, s)
@@ -740,7 +822,8 @@ def update_config_with_dfba(template_xml_path,
         for s in global_substrates_sorted:
             ensure_chemotactic_sensitivities(cell, s)
         # ensure cell_interactions entries exist for all cell types
-        ensure_cell_interactions_for_all(cell, all_cell_names)
+        
+        ensure_cell_interactions_for_all(cell, all_cell_names, verbose=verbose)
 
     # Finally write output
     xml_pretty_write(tree, output_xml_path)
@@ -751,16 +834,21 @@ def update_config_with_dfba(template_xml_path,
 # CLI
 # ----------------------
 def main():
+    print("[INFO] Running dfba_configurator.py (ensure_cell_interactions_for_all updated)")
     parser = argparse.ArgumentParser(description="Inject dfBA blocks into PhysiCell config using a template cell_definition.")
     parser.add_argument("--template", "-t", required=True, help="Path to PhysiCell XML template.")
     parser.add_argument("--output", "-o", required=True, help="Path to write updated PhysiCell XML.")
     parser.add_argument("--config", "-c", required=True,
                         help="YAML configuration file with models, SBML paths, exchanges, and parameters.")
-    parser.add_argument("--sbml-folder", "-s", required=True, help="Folder containing SBML files (for resolving relative paths).")
+    parser.add_argument("--sbml-folder", "-s", default="config", help="Folder containing SBML files (for resolving relative paths).")
     parser.add_argument("--template-cell", default="", help="Name of the cell_definition in template to use as blueprint. If empty or not provided, uses the first cell_definition found.")
     parser.add_argument("--cell-prefix", default="", help="Optional prefix to prepend to new cell_definition names.")
     parser.add_argument("--keep-existing-cells", action="store_true", 
                         help="Keep existing cell_definitions from template. By default, all existing cell_definitions are removed before adding new ones.")
+    parser.add_argument("--keep-existing-densities", action="store_true",
+                        help="Keep existing microenvironment densities (variables). By default existing densities are removed before adding new ones.")
+    parser.add_argument("--verbose", action="store_true",
+                        help="Enable verbose debug output.")
     args = parser.parse_args()
 
     update_config_with_dfba(
@@ -770,7 +858,9 @@ def main():
         args.sbml_folder,
         args.template_cell,
         cell_prefix=args.cell_prefix,
-        keep_existing_cells=args.keep_existing_cells
+        keep_existing_cells=args.keep_existing_cells,
+        keep_existing_densities=args.keep_existing_densities,
+        verbose=args.verbose
     )
 
 
