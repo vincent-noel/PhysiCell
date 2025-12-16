@@ -4,16 +4,13 @@ dfba_configurator.py
 
 Usage example:
     python dfba_configurator.py \
-      --template config_template.xml \
       --output config_updated.xml \
       --config dfba_config.yaml \
       --sbml-folder ./models \
-      --template-cell default_cell_def_name \
       --cell-prefix dfba_
 
 Requirements:
-    pip install lxml pandas pyyaml
-    (libsbml is optional; not required for this version)
+    pip install lxml pandas pyyaml physicell-settings
 """
 
 import argparse
@@ -25,149 +22,43 @@ import glob
 from lxml import etree
 import copy
 import yaml
+from physicell_config import PhysiCellConfig
 
 # ----------------------
 # Utilities
 # ----------------------
-def xml_pretty_write(tree, path):
-    tree.write(path, pretty_print=True, xml_declaration=True, encoding="UTF-8")
-
-
-def filename_stem(path):
-    return os.path.splitext(os.path.basename(path))[0]
-
-
-def find_template_cell(root, template_name=None):
+def indent(elem, level=0):
     """
-    Find a cell_definition by name, or return the first one if template_name is None or empty.
-    
-    Args:
-        root: XML root element
-        template_name: Optional name of the cell_definition. If None or empty string, returns first cell_definition.
-    
-    Returns:
-        First matching cell_definition element
-    
-    Raises:
-        ValueError: If template_name is provided but not found, or if no cell_definitions exist
+    In-place indentation of XML element tree.
     """
-    if not template_name:
-        # Return first cell_definition
-        cell_def = root.find(".//cell_definition")
-        if cell_def is None:
-            raise ValueError("No cell_definition found in template.")
-        return cell_def
+    i = "\n" + level*"  "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "  "
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+        for elem in elem:
+            indent(elem, level+1)
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
     else:
-        # Find by name
-        cell_def = root.find(f".//cell_definition[@name='{template_name}']")
-        if cell_def is None:
-            raise ValueError(f"Template cell_definition with name '{template_name}' not found in template.")
-        return cell_def
+        if level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i
 
-
-# ----------------------
-# Microenvironment utilities
-# ----------------------
-def make_microenv_variable(name, var_id, diff=50000.0, decay=0.0, init=0.0):
-    var = etree.Element("variable", name=name, units="dimensionless")
-    var.set("ID", str(var_id))
-    phys = etree.SubElement(var, "physical_parameter_set")
-    etree.SubElement(phys, "diffusion_coefficient", units="micron^2/min").text = str(diff)
-    etree.SubElement(phys, "decay_rate", units="1/min").text = str(decay)
-    etree.SubElement(var, "initial_condition", units="mM").text = str(init)
-    dbc = etree.SubElement(var, "Dirichlet_boundary_condition", units="mM", enabled="False")
-    dbc.text = "0.0"
-    do = etree.SubElement(var, "Dirichlet_options")
-    for b in ("xmin", "xmax", "ymin", "ymax", "zmin", "zmax"):
-        etree.SubElement(do, "boundary_value", ID=b, enabled="False").text = "0.0"
-    return var
-
+def xml_pretty_write(tree, path):
+    # Ensure indentation is applied
+    indent(tree.getroot())
+    tree.write(path, pretty_print=True, xml_declaration=True, encoding="UTF-8")
 
 # ----------------------
 # Secretion block utilities (per cell_definition)
 # ----------------------
-def ensure_secretion_has_substrate(cell_def, substrate_name):
-    """
-    Inside cell_def -> phenotype -> secretion, ensure a <substrate name="..."> block exists.
-    If not, create one with default zeros.
-    """
-    phenotype = cell_def.find("./phenotype")
-    if phenotype is None:
-        phenotype = etree.SubElement(cell_def, "phenotype")
-    secretion = phenotype.find("secretion")
-    if secretion is None:
-        secretion = etree.SubElement(phenotype, "secretion")
-
-    # search for substrate block with matching name attribute
-    for sub in secretion.findall("substrate"):
-        if sub.get("name") == substrate_name:
-            # ensure fields exist
-            _ensure_secretion_fields(sub)
-            return
-
-    # not found -> create default substrate block
-    sub = etree.SubElement(secretion, "substrate", name=substrate_name)
-    etree.SubElement(sub, "secretion_rate", units="1/min").text = "0.0"
-    etree.SubElement(sub, "secretion_target", units="substrate density").text = "0.0"
-    etree.SubElement(sub, "uptake_rate", units="1/min").text = "0.0"
-    etree.SubElement(sub, "net_export_rate", units="total substrate/min").text = "0.0"
-
-
-def _ensure_secretion_fields(sub_node):
-    # Add any missing child tags with safe default values
-    fields = {
-        "secretion_rate": ("1/min", "0.0"),
-        "secretion_target": ("substrate density", "0.0"),
-        "uptake_rate": ("1/min", "0.0"),
-        "net_export_rate": ("total substrate/min", "0.0")
-    }
-    for tag, (units, default) in fields.items():
-        el = sub_node.find(tag)
-        if el is None:
-            etree.SubElement(sub_node, tag, units=units).text = default
-
+# (Removed ensure_secretion_has_substrate and _ensure_secretion_fields as physicell-settings handles this)
 
 # ----------------------
 # Chemotactic sensitivities utilities (per cell_definition)
 # ----------------------
-def ensure_chemotactic_sensitivities(cell_def, substrate_name):
-    """
-    Ensure phenotype->motility->options->advanced_chemotaxis->chemotactic_sensitivities
-    contains <chemotactic_sensitivity substrate="..." >0.0</chemotactic_sensitivity>
-    """
-    phenotype = cell_def.find("./phenotype")
-    if phenotype is None:
-        phenotype = etree.SubElement(cell_def, "phenotype")
-
-    motility = phenotype.find("motility")
-    if motility is None:
-        motility = etree.SubElement(phenotype, "motility")
-
-    options = motility.find("options")
-    if options is None:
-        options = etree.SubElement(motility, "options")
-
-    adv = options.find("advanced_chemotaxis")
-    if adv is None:
-        adv = etree.SubElement(options, "advanced_chemotaxis")
-        etree.SubElement(adv, "enabled").text = "false"
-        etree.SubElement(adv, "normalize_each_gradient").text = "false"
-
-    chems = adv.find("chemotactic_sensitivities")
-    if chems is None:
-        chems = etree.SubElement(adv, "chemotactic_sensitivities")
-
-    # See if substrate already present
-    for cs in chems.findall("chemotactic_sensitivity"):
-        if cs.get("substrate") == substrate_name:
-            # ensure text exists
-            if (cs.text is None) or (cs.text.strip() == ""):
-                cs.text = "0.0"
-            return
-    # Add missing
-    new_cs = etree.SubElement(chems, "chemotactic_sensitivity", substrate=substrate_name)
-    new_cs.text = "0.0"
-
+# (Removed ensure_chemotactic_sensitivities as physicell-settings handles this)
 
 # ----------------------
 # Volume update utility
@@ -281,582 +172,184 @@ def add_intracellular_dfba(cell_def, sbml_path, model_config):
 # ----------------------
 # Cell interactions matrix update
 # ----------------------
-def ensure_cell_interactions_for_all(cell_def, all_cell_names, verbose=False):
-    """
-    Clean and update `cell_interactions` and `cell_transformations` for a
-    single `cell_definition`.
-
-    Behavior:
-    - Remove per-cell interaction entries (phagocytosis/attack/fusion) that
-      reference cells not present in `all_cell_names`.
-    - Preserve existing entries for cells that are defined.
-    - Ensure a self-entry exists for phagocytosis/attack/fusion with value
-      "0.0" if missing.
-    - Replace `cell_transformations` with a single self-transformation entry
-      with rate "0.0".
-
-    Args:
-        cell_def: XML element for the `cell_definition` being updated.
-        all_cell_names: iterable of currently defined cell names.
-    """
-    defined_cell_set = set(all_cell_names)
-    cell_name = cell_def.get("name")
-
-    # Merge any existing cell_interactions blocks (some templates contain
-    # multiple `cell_interactions` elements). Collect per-cell entries so we
-    # can preserve values for defined cells, then remove duplicates and write
-    # a single canonical block.
-    collected = {
-        'phagocytosis_rate': {},
-        'attack_rate': {},
-        'fusion_rate': {}
-    }
-
-    # find all occurrences anywhere under this cell_definition (including nested)
-    ci_nodes = cell_def.findall('.//cell_interactions')
-    if ci_nodes:
-        if verbose:
-            print(f"[DEBUG] Found {len(ci_nodes)} existing 'cell_interactions' blocks for cell '{cell_name}'")
-        for node in ci_nodes:
-            # collect phagocytosis_rate
-            lpr_node = node.find('live_phagocytosis_rates')
-            if lpr_node is not None:
-                for child in lpr_node.findall('phagocytosis_rate'):
-                    n = child.get('name')
-                    if n and n in defined_cell_set:
-                        collected['phagocytosis_rate'][n] = child.text if child.text is not None else '0.0'
-            # collect attack_rate
-            ar_node = node.find('attack_rates')
-            if ar_node is not None:
-                for child in ar_node.findall('attack_rate'):
-                    n = child.get('name')
-                    if n and n in defined_cell_set:
-                        collected['attack_rate'][n] = child.text if child.text is not None else '0.0'
-            # collect fusion_rate
-            fr_node = node.find('fusion_rates')
-            if fr_node is not None:
-                for child in fr_node.findall('fusion_rate'):
-                    n = child.get('name')
-                    if n and n in defined_cell_set:
-                        collected['fusion_rate'][n] = child.text if child.text is not None else '0.0'
-        # remove all existing nodes to avoid duplicates — remove from each node's parent
-        for node in ci_nodes:
-            parent = node.getparent()
-            if parent is not None:
-                parent.remove(node)
-
-    # Create a single canonical cell_interactions block
-    ci = etree.SubElement(cell_def, 'cell_interactions')
-    for field in ('apoptotic_phagocytosis_rate', 'necrotic_phagocytosis_rate', 'other_dead_phagocytosis_rate'):
-        etree.SubElement(ci, field, units='1/min').text = '0.0'
-
-    # Helper to build a block from collected entries (and ensure self-entry)
-    def _build_block(parent, block_tag, child_tag, collected_map):
-        block = etree.SubElement(parent, block_tag)
-        # add entries from all defined cells in sorted order for reproducibility
-        for name in sorted(defined_cell_set):
-            val = collected_map.get(name, None)
-            if val is None:
-                # if no previous value, default to 0.0
-                val = '0.0'
-            etree.SubElement(block, child_tag, name=name, units='1/min').text = str(val)
-        return block
-
-    lpr = _build_block(ci, 'live_phagocytosis_rates', 'phagocytosis_rate', collected['phagocytosis_rate'])
-    ar  = _build_block(ci, 'attack_rates', 'attack_rate', collected['attack_rate'])
-    fr  = _build_block(ci, 'fusion_rates', 'fusion_rate', collected['fusion_rate'])
-
-    if verbose:
-        print(f"[DEBUG] Built unified 'cell_interactions' for '{cell_name}': lpr={list(collected['phagocytosis_rate'].keys())}, ar={list(collected['attack_rate'].keys())}, fr={list(collected['fusion_rate'].keys())}")
-
-    # remove any existing cell_transformations anywhere under this cell_definition
-    for ct in list(cell_def.findall('.//cell_transformations')):
-        parent = ct.getparent()
-        if parent is not None:
-            parent.remove(ct)
-    ct = etree.SubElement(cell_def, "cell_transformations")
-    tr = etree.SubElement(ct, "transformation_rates")
-    if cell_name:
-        etree.SubElement(tr, "transformation_rate", name=cell_name, units="1/min").text = "0.0"
-
-    # Clean and rebuild cell_adhesion_affinities with only a self-entry
-    for caa in list(cell_def.findall('.//cell_adhesion_affinities')):
-        parent = caa.getparent()
-        if parent is not None:
-            parent.remove(caa)
-    
-    # Find the mechanics block where cell_adhesion_affinities should live
-    mechanics = cell_def.find('.//mechanics')
-    if mechanics is not None:
-        caa = etree.SubElement(mechanics, "cell_adhesion_affinities")
-        if cell_name:
-            etree.SubElement(caa, "cell_adhesion_affinity", name=cell_name).text = "1"
-        if verbose:
-            print(f"[DEBUG] Rebuilt 'cell_adhesion_affinities' for '{cell_name}' with self-entry")
-
+# (Removed ensure_cell_interactions_for_all as physicell-settings handles this)
 
 # ----------------------
 # Validation
 # ----------------------
 def validate_yaml_config(config, config_yaml_path, sbml_folder):
     """
-    Validate YAML configuration structure and content.
-    
-    Args:
-        config: Parsed YAML configuration dictionary
-        config_yaml_path: Path to YAML file (for error messages)
-        sbml_folder: Folder containing SBML files (for path resolution)
-    
-    Raises:
-        ValueError: If validation fails
+    Lighter validation of YAML configuration.
+    Checks for existence of critical files and sections.
     """
-    errors = []
-    warnings = []
-    
-    # Check required top-level sections
-    if not isinstance(config, dict):
-        raise ValueError(f"YAML config must be a dictionary, got {type(config)}")
-    
-    if "models" not in config:
-        raise ValueError("YAML config must contain a 'models' section")
-    
-    if not isinstance(config["models"], dict):
-        raise ValueError("'models' section must be a dictionary")
-    
-    if len(config["models"]) == 0:
-        raise ValueError("'models' section must contain at least one model")
-    
-    # Build substrate name set
-    substrate_names = set()
-    if "substrates" in config:
-        if not isinstance(config["substrates"], list):
-            errors.append("'substrates' section must be a list")
-        else:
-            for idx, sub_config in enumerate(config["substrates"]):
-                if not isinstance(sub_config, dict):
-                    errors.append(f"Substrate entry {idx} must be a dictionary")
-                    continue
-                
-                name = sub_config.get("name")
-                if not name:
-                    errors.append(f"Substrate entry {idx} missing required 'name' field")
-                else:
-                    if name in substrate_names:
-                        warnings.append(f"Duplicate substrate name '{name}' in substrates section")
-                    substrate_names.add(name)
-                
-                # Validate substrate properties
-                if "diffusion_coefficient" in sub_config:
-                    try:
-                        diff = float(sub_config["diffusion_coefficient"])
-                        if diff < 0:
-                            errors.append(f"Substrate '{name}': diffusion_coefficient must be >= 0")
-                    except (ValueError, TypeError):
-                        errors.append(f"Substrate '{name}': diffusion_coefficient must be a number")
-                
-                if "decay_rate" in sub_config:
-                    try:
-                        decay = float(sub_config["decay_rate"])
-                        if decay < 0:
-                            errors.append(f"Substrate '{name}': decay_rate must be >= 0")
-                    except (ValueError, TypeError):
-                        errors.append(f"Substrate '{name}': decay_rate must be a number")
-                
-                if "initial_condition" in sub_config:
-                    try:
-                        float(sub_config["initial_condition"])
-                    except (ValueError, TypeError):
-                        errors.append(f"Substrate '{name}': initial_condition must be a number")
-    
-    # Validate models
-    all_exchange_substrates = set()
+    if "models" not in config or not config["models"]:
+        raise ValueError("YAML config must contain a non-empty 'models' section")
+
+    # Validate models and files
     for model_name, model_config in config["models"].items():
-        if not isinstance(model_config, dict):
-            errors.append(f"Model '{model_name}': configuration must be a dictionary")
-            continue
-        
-        # Check required fields
-        if "sbml_path" not in model_config:
-            errors.append(f"Model '{model_name}': missing required 'sbml_path' field")
-        else:
-            sbml_path_rel = model_config["sbml_path"]
-            if not isinstance(sbml_path_rel, str):
-                errors.append(f"Model '{model_name}': 'sbml_path' must be a string")
-            else:
-                # Resolve SBML path
-                if os.path.isabs(sbml_path_rel):
-                    sbml_path = sbml_path_rel
-                else:
-                    sbml_path = os.path.join(sbml_folder, sbml_path_rel)
-                
-                # Check if file exists
-                if not os.path.exists(sbml_path):
-                    errors.append(f"Model '{model_name}': SBML file not found: {sbml_path}")
-                elif not os.path.isfile(sbml_path):
-                    errors.append(f"Model '{model_name}': SBML path is not a file: {sbml_path}")
-        
-        # Validate exchanges
-        if "exchanges" not in model_config:
-            errors.append(f"Model '{model_name}': missing required 'exchanges' field")
-        else:
-            exchanges = model_config["exchanges"]
-            if not isinstance(exchanges, list):
-                errors.append(f"Model '{model_name}': 'exchanges' must be a list")
-            elif len(exchanges) == 0:
-                warnings.append(f"Model '{model_name}': 'exchanges' list is empty")
-            else:
-                for idx, exchange in enumerate(exchanges):
-                    if not isinstance(exchange, dict):
-                        errors.append(f"Model '{model_name}': exchange {idx} must be a dictionary")
-                        continue
-                    
-                    # Check required exchange fields
-                    required_fields = ["substrate", "fba_flux", "Km", "Vmax"]
-                    for field in required_fields:
-                        if field not in exchange:
-                            errors.append(f"Model '{model_name}': exchange {idx} missing required field '{field}'")
-                    
-                    # Validate substrate reference
-                    substrate = exchange.get("substrate")
-                    if substrate:
-                        all_exchange_substrates.add(substrate)
-                        if substrate_names and substrate not in substrate_names:
-                            errors.append(
-                                f"Model '{model_name}': exchange {idx} references substrate '{substrate}' "
-                                f"which is not defined in the 'substrates' section"
-                            )
-                    
-                    # Validate numeric fields
-                    for field in ["Km", "Vmax"]:
-                        if field in exchange:
-                            try:
-                                val = float(exchange[field])
-                                if val < 0:
-                                    errors.append(f"Model '{model_name}': exchange {idx} '{field}' must be >= 0")
-                            except (ValueError, TypeError):
-                                errors.append(f"Model '{model_name}': exchange {idx} '{field}' must be a number")
-        
-        # Validate growth_model if present
-        if "growth_model" in model_config:
-            growth = model_config["growth_model"]
-            if not isinstance(growth, dict):
-                errors.append(f"Model '{model_name}': 'growth_model' must be a dictionary")
-            else:
-                numeric_fields = ["cell_density", "reference_volume", "max_growth_rate", "nuclear_volume"]
-                for field in numeric_fields:
-                    if field in growth:
-                        try:
-                            val = float(growth[field])
-                            if val < 0:
-                                errors.append(f"Model '{model_name}': growth_model '{field}' must be >= 0")
-                        except (ValueError, TypeError):
-                            errors.append(f"Model '{model_name}': growth_model '{field}' must be a number")
-                
-                if "objective_reaction" in growth:
-                    if not isinstance(growth["objective_reaction"], str):
-                        errors.append(f"Model '{model_name}': growth_model 'objective_reaction' must be a string")
-        
-        # Validate settings if present
-        if "settings" in model_config:
-            settings = model_config["settings"]
-            if not isinstance(settings, dict):
-                errors.append(f"Model '{model_name}': 'settings' must be a dictionary")
-            else:
-                if "intracellular_dt" in settings:
-                    try:
-                        dt = float(settings["intracellular_dt"])
-                        if dt <= 0:
-                            errors.append(f"Model '{model_name}': settings 'intracellular_dt' must be > 0")
-                    except (ValueError, TypeError):
-                        errors.append(f"Model '{model_name}': settings 'intracellular_dt' must be a number")
-        
-        # Validate death_model if present
-        if "death_model" in model_config:
-            death = model_config["death_model"]
-            if not isinstance(death, dict):
-                errors.append(f"Model '{model_name}': 'death_model' must be a dictionary")
-            else:
-                if "enabled" in death:
-                    if not isinstance(death["enabled"], bool):
-                        errors.append(f"Model '{model_name}': death_model 'enabled' must be a boolean")
-                if "death_type" in death:
-                    if not isinstance(death["death_type"], str):
-                        errors.append(f"Model '{model_name}': death_model 'death_type' must be a string")
-                for field in ["death_trigger_flux", "death_flux_threshold", "death_rate_increase"]:
-                    if field in death:
-                        try:
-                            float(death[field])
-                        except (ValueError, TypeError):
-                            errors.append(f"Model '{model_name}': death_model '{field}' must be a number")
-    
-    
-    # Check for substrates in exchanges that aren't defined
-    if all_exchange_substrates:
-        if not substrate_names:
-            warnings.append(
-                f"No 'substrates' section found. The following substrates are referenced in exchanges "
-                f"and will use default values: {', '.join(sorted(all_exchange_substrates))}"
-            )
-        else:
-            undefined_substrates = all_exchange_substrates - substrate_names
-            if undefined_substrates:
-                errors.append(
-                    f"The following substrates are referenced in exchanges but not defined in 'substrates' section: "
-                    f"{', '.join(sorted(undefined_substrates))}"
-                )
-    
-    # Report warnings
-    if warnings:
-        print("[WARNING] Validation warnings:")
-        for warning in warnings:
-            print(f"  - {warning}")
-    
-    # Report errors and raise if any
-    if errors:
-        error_msg = f"YAML configuration validation failed ({len(errors)} error(s)):\n"
-        for error in errors:
-            error_msg += f"  - {error}\n"
-        raise ValueError(error_msg)
-    
-    print(f"[OK] YAML configuration validation passed")
-    if substrate_names:
-        print(f"[INFO] Found {len(substrate_names)} substrate(s) and {len(config['models'])} model(s)")
-
-
-# ----------------------
-# Main orchestration
-# ----------------------
-def update_config_with_dfba(template_xml_path,
-                           output_xml_path,
-                           config_yaml_path,
-                           sbml_folder,
-                           template_cell_name,
-                           cell_prefix="",
-                           keep_existing_cells=False,
-                           keep_existing_densities=False,
-                           verbose=False):
-    """
-    Update PhysiCell config with dFBA models from YAML configuration.
-    
-    Args:
-        template_xml_path: Path to PhysiCell XML template
-        output_xml_path: Path to write updated XML
-        config_yaml_path: Path to YAML configuration file
-        sbml_folder: Folder containing SBML files (for resolving relative paths)
-        template_cell_name: Name of template cell_definition to clone
-        cell_prefix: Optional prefix for new cell definition names
-        keep_existing_cells: If False (default), remove all existing cell_definitions before adding new ones.
-                            If True, keep existing cell_definitions and add new ones.
-    """
-    # Parse template XML
-    parser = etree.XMLParser(remove_blank_text=True)
-    tree = etree.parse(template_xml_path, parser)
-    root = tree.getroot()
-
-    # Load YAML configuration
-    with open(config_yaml_path, 'r') as f:
-        config = yaml.safe_load(f)
-    
-    # Validate configuration before processing
-    validate_yaml_config(config, config_yaml_path, sbml_folder)
-    
-    models = config["models"]
-    
-    # Build substrate configuration dictionary
-    substrate_configs = {}
-    global_substrates = set()
-    if "substrates" in config:
-        for sub_config in config["substrates"]:
-            name = sub_config.get("name")
-            global_substrates.add(name)
-            if name:
-                substrate_configs[name] = {
-                    "diffusion_coefficient": sub_config.get("diffusion_coefficient"),
-                    "decay_rate": sub_config.get("decay_rate"),
-                    "initial_condition": sub_config.get("initial_condition", 0.0)
-                }
-    global_substrates_sorted = sorted(global_substrates)
-    
-    # Ensure microenvironment contains all substrates
-    microenv = root.find(".//microenvironment_setup")
-    if microenv is None:
-        raise ValueError("Template missing <microenvironment_setup> section.")
-
-    # If we're not keeping existing densities, remove all current <variable> entries
-    existing_vars = set()
-    if not keep_existing_densities:
-        vars_found = microenv.findall("variable")
-        for v in vars_found:
-            microenv.remove(v)
-        if vars_found:
-            print(f"[INFO] Removed {len(vars_found)} existing microenvironment variable(s) (densities) because keep_existing_densities=False")
-        # remove any existing plot_substrate entries under microenvironment_setup
-        plot_nodes = microenv.findall("plot_substrate")
-        for p in plot_nodes:
-            parent = p.getparent()
-            if parent is not None:
-                parent.remove(p)
-        if vars_found or plot_nodes:
-            print(f"[INFO] Removed {len(vars_found)} existing microenvironment variable(s) and {len(plot_nodes)} plot_substrate(s) because keep_existing_densities=False")
-    else:
-        existing_vars = {v.get("name") for v in microenv.findall("variable")}
-    
-    new_id = len(existing_vars)
-    for s in global_substrates_sorted:
-        if s not in existing_vars:
-            # Get substrate-specific configuration or use hardcoded defaults
-            sub_config = substrate_configs.get(s, {})
-            diff = sub_config.get("diffusion_coefficient", 50000.0)
-            decay = sub_config.get("decay_rate", 0.0)
-            init = sub_config.get("initial_condition", 0.0)
-            
-            print(f"[INFO] Adding microenvironment variable for substrate '{s}' "
-                  f"(diffusion={diff}, decay={decay}, init={init})")
-            microenv.append(make_microenv_variable(s, new_id, diff=diff, decay=decay, init=init))
-            new_id += 1
-            existing_vars.add(s)
-
-
-    # Find template cell_definition
-    template_cell = find_template_cell(root, template_cell_name)
-
-    # We'll insert new cell_definitions after the template inside <cell_definitions>
-    cdefs_parent = root.find(".//cell_definitions")
-    if cdefs_parent is None:
-        raise ValueError("No <cell_definitions> parent found in template XML.")
-
-    # Handle existing cell_definitions based on flag and determine starting ID
-    # Note: We need to keep the template cell temporarily for cloning, so we'll remove it after cloning
-    template_cell_name_to_remove = None
-    next_id = 0
-    
-    if not keep_existing_cells:
-        # Store template cell name to remove it later (after we've cloned it for all models)
-        template_cell_name_to_remove = template_cell.get("name")
-        # Remove all other existing cell_definitions (keep template for now so we can clone it)
-        existing_cells = cdefs_parent.findall("cell_definition")
-        cells_to_remove = [cell for cell in existing_cells if cell.get("name") != template_cell_name_to_remove]
-        for cell in cells_to_remove:
-            cdefs_parent.remove(cell)
-        print(f"[INFO] Removed {len(cells_to_remove)} existing cell_definition(s) from template (keeping template for cloning)")
-        # Start IDs from 0 when removing existing cells
-        next_id = 0
-    else:
-        # Count existing cell_definitions to determine next ID
-        existing_cells = cdefs_parent.findall("cell_definition")
-        next_id = len(existing_cells)
-        print(f"[INFO] Keeping existing cell_definitions (found {len(existing_cells)} cell_definition(s)), next ID will be {next_id}")
-
-    created_cell_names = []
-    
-
-    # For each model: clone template and customize
-    for model_name, model_config in models.items():
-        # Resolve SBML path
+        # Check SBML file existence
         sbml_path_rel = model_config.get("sbml_path")
         if not sbml_path_rel:
-            raise ValueError(f"Model '{model_name}' missing 'sbml_path' in configuration")
+            raise ValueError(f"Model '{model_name}': missing 'sbml_path'")
         
-        # If relative path, resolve against sbml_folder
         if os.path.isabs(sbml_path_rel):
             sbml_path = sbml_path_rel
         else:
             sbml_path = os.path.join(sbml_folder, sbml_path_rel)
         
-        # Check if SBML file exists
         if not os.path.exists(sbml_path):
-            raise FileNotFoundError(f"SBML file not found: {sbml_path}")
+            raise ValueError(f"Model '{model_name}': SBML file not found: {sbml_path}")
+
+        # Check exchanges existence
+        if "exchanges" not in model_config:
+            raise ValueError(f"Model '{model_name}': missing 'exchanges' section")
+
+    print(f"[OK] YAML configuration structure validated")
+
+
+# ----------------------
+# Main orchestration
+# ----------------------
+def update_config_with_dfba(output_xml_path,
+                           config_yaml_path,
+                           sbml_folder,
+                           cell_prefix="",
+                           verbose=False):
+    """
+    Create PhysiCell config from scratch with dFBA models from YAML configuration.
+    
+    Args:
+        output_xml_path: Path to write updated XML
+        config_yaml_path: Path to YAML configuration file
+        sbml_folder: Folder containing SBML files (for resolving relative paths)
+        cell_prefix: Optional prefix for new cell definition names
+    """
+    # Load YAML configuration
+    with open(config_yaml_path, 'r') as f:
+        yaml_config = yaml.safe_load(f)
+    
+    # Validate configuration before processing
+    validate_yaml_config(yaml_config, config_yaml_path, sbml_folder)
+    
+    # Initialize PhysiCellConfig from scratch
+    config = PhysiCellConfig()
+    print(f"[INFO] Initialized new PhysiCell configuration")
+
+    # Handle Substrates
+    global_substrates = set()
+    if "substrates" in yaml_config:
+        # Sort substrates by name
+        sorted_substrates = sorted(yaml_config["substrates"], key=lambda x: x.get("name", ""))
         
-        # Use absolute path for XML
-        sbml_path_abs = os.path.abspath(sbml_path)
-        
+        for sub_config in sorted_substrates:
+            name = sub_config.get("name")
+            global_substrates.add(name)
+            
+            diff = sub_config.get("diffusion_coefficient", 50000.0)
+            decay = sub_config.get("decay_rate", 0.0)
+            init = sub_config.get("initial_condition", 0.0)
+            
+            print(f"[INFO] Adding microenvironment variable for substrate '{name}' "
+                  f"(diffusion={diff}, decay={decay}, init={init})")
+            
+            config.add_simple_substrate(
+                name=name,
+                diffusion_coeff=diff,
+                decay_rate=decay,
+                initial_value=init
+            )
+    
+    global_substrates_sorted = sorted(global_substrates)
+
+    # Create new cells
+    models = yaml_config["models"]
+    created_cell_names = []
+    next_id = 0
+
+    for model_name, model_config in models.items():
         new_name = f"{cell_prefix}{model_name}"
+        
+        # Create default cell type
+        config.cell_types.add_cell_type(new_name)
+        
+        # Set ID
+        config.cell_types.cell_types[new_name]['ID'] = str(next_id)
 
-        template_info = f"from template '{template_cell_name}'" if template_cell_name else "from first template cell_definition"
-        print(f"[INFO] Creating cell_definition '{new_name}' {template_info} with SBML: {sbml_path_abs}")
-
-        # deep copy the template element
-        new_cell = copy.deepcopy(template_cell)
-        # assign new name
-        new_cell.set("name", new_name)
-        # assign incremental ID
-        new_cell.set("ID", str(next_id))
-        print(f"[INFO] Assigned ID={next_id} to cell_definition '{new_name}'")
-        next_id += 1
-
-        # Update volume block from YAML growth_model (reference_volume -> total, nuclear_volume -> nuclear)
+        # Set cell cycle to "live"
+        config.cell_types.set_cycle_model(new_name, "live")
+        
+        # Update volume
         growth_cfg = model_config.get("growth_model", {})
         total_volume = growth_cfg.get("reference_volume")
         nuclear_volume = growth_cfg.get("nuclear_volume", 0.0)
-        if total_volume is not None:
-            set_cell_volume(new_cell, total_volume=total_volume, nuclear_volume=nuclear_volume)
-
-        # Add dfba intracellular according to model configuration
-        add_intracellular_dfba(new_cell, sbml_path_abs, model_config)
-
-        # Collect all substrates from exchanges
-        exchanges = model_config.get("exchanges", [])
-        for exchange in exchanges:
-            assert exchange["substrate"] in global_substrates
-
-        # Ensure secretion entries for all substrates in full parameter table (global list)
-        # We'll gather global list later, but for now accumulate created cell names and add later
-        cdefs_parent.append(new_cell)
-        created_cell_names.append(new_name)
-
-    # If we're removing existing cells, also remove the template cell now (after cloning)
-    if template_cell_name_to_remove:
-        template_cell_to_remove = cdefs_parent.find(f".//cell_definition[@name='{template_cell_name_to_remove}']")
-        if template_cell_to_remove is not None:
-            cdefs_parent.remove(template_cell_to_remove)
-            print(f"[INFO] Removed template cell_definition '{template_cell_name_to_remove}' after cloning")
-
-    # Now we have appended new cell_definitions; compute full list of cell names (existing + created)
-    all_cell_defs = [cd.get("name") for cd in cdefs_parent.findall("cell_definition")]
-    all_cell_names = list(dict.fromkeys(all_cell_defs))  # preserve order, deduplicate
-    if verbose:
-        print(f"[DEBUG] Final cell_definitions (all_cell_names) = {all_cell_names}")
-
-    
-    # For each cell_def (both original template and new ones) ensure secretion and chemotactic sensitivities and cell interactions
-    for cell in cdefs_parent.findall("cell_definition"):
-        name = cell.get("name")
-        if verbose:
-            print(f"[DEBUG] Processing cell_definition: '{name}'")
-        # If we're not keeping existing densities, remove existing secretion
-        # substrate blocks and chemotactic sensitivity entries so they can be
-        # rebuilt cleanly for the new substrate list.
-        if not keep_existing_densities:
-            phenotype = cell.find("./phenotype")
-            if phenotype is not None:
-                # remove secretion substrates
-                secretion = phenotype.find("secretion")
-                if secretion is not None:
-                    for sub in list(secretion.findall("substrate")):
-                        secretion.remove(sub)
-                # remove chemotactic sensitivities
-                motility = phenotype.find("motility")
-                if motility is not None:
-                    options = motility.find("options")
-                    if options is not None:
-                        adv = options.find("advanced_chemotaxis")
-                        if adv is not None:
-                            chems = adv.find("chemotactic_sensitivities")
-                            if chems is not None:
-                                for cs in list(chems.findall("chemotactic_sensitivity")):
-                                    chems.remove(cs)
-
-        # ensure secretion contains all substrates
-        for s in global_substrates_sorted:
-            ensure_secretion_has_substrate(cell, s)
-        # ensure chemotactic sensitivities contain all substrates
-        for s in global_substrates_sorted:
-            ensure_chemotactic_sensitivities(cell, s)
-        # ensure cell_interactions entries exist for all cell types
         
-        ensure_cell_interactions_for_all(cell, all_cell_names, verbose=verbose)
+        if total_volume is not None:
+            # Use helper if available or direct access
+            if hasattr(config.cell_types, 'set_volume_parameters'):
+                config.cell_types.set_volume_parameters(new_name, total=float(total_volume), nuclear=float(nuclear_volume))
+            else:
+                # Fallback to direct access
+                if 'phenotype' not in config.cell_types.cell_types[new_name]:
+                    config.cell_types.cell_types[new_name]['phenotype'] = {}
+                if 'volume' not in config.cell_types.cell_types[new_name]['phenotype']:
+                    config.cell_types.cell_types[new_name]['phenotype']['volume'] = {}
+                
+                config.cell_types.cell_types[new_name]['phenotype']['volume']['total'] = str(total_volume)
+                config.cell_types.cell_types[new_name]['phenotype']['volume']['nuclear'] = str(nuclear_volume)
 
-    # Finally write output
+        print(f"[INFO] Created cell_definition '{new_name}' with ID={next_id}")
+        
+        created_cell_names.append(new_name)
+        next_id += 1
+
+    # Add random_seed to user params
+    config.add_user_parameter("random_seed", parameter_type="int", description="Random seed for simulation", value="0")
+
+    # Generate XML string to perform low-level dFBA injections
+    print("[INFO] Generating intermediate XML for dFBA injection...")
+    xml_str = config.generate_xml()
+    
+    # Parse with lxml
+    root = etree.fromstring(xml_str.encode('utf-8'))
+    
+    # Get all cell names for interaction matrix
+    all_cell_defs = root.findall(".//cell_definition")
+    all_cell_names = [cd.get("name") for cd in all_cell_defs]
+    
+    # Inject dFBA blocks and ensure interactions
+    for cell_def in all_cell_defs:
+        name = cell_def.get("name")
+        
+        # Identify if this cell corresponds to a model
+        model_key = None
+        if name in created_cell_names:
+            if name.startswith(cell_prefix):
+                potential_model = name[len(cell_prefix):]
+                if potential_model in models:
+                    model_key = potential_model
+        
+        if model_key:
+            model_config = models[model_key]
+            
+            # Resolve SBML path
+            sbml_path_rel = model_config.get("sbml_path")
+            if os.path.isabs(sbml_path_rel):
+                sbml_path = sbml_path_rel
+            else:
+                sbml_path = os.path.join(sbml_folder, sbml_path_rel)
+            sbml_path_abs = os.path.abspath(sbml_path)
+            
+            add_intracellular_dfba(cell_def, sbml_path_abs, model_config)
+            
+            # Ensure volume (redundant but safe)
+            growth_cfg = model_config.get("growth_model", {})
+            total_volume = growth_cfg.get("reference_volume")
+            nuclear_volume = growth_cfg.get("nuclear_volume", 0.0)
+            if total_volume is not None:
+                set_cell_volume(cell_def, total_volume=total_volume, nuclear_volume=nuclear_volume)
+
+    # Write final output
+    tree = etree.ElementTree(root)
     xml_pretty_write(tree, output_xml_path)
     print(f"[OK] Wrote updated config to: {output_xml_path}")
 
@@ -865,32 +358,22 @@ def update_config_with_dfba(template_xml_path,
 # CLI
 # ----------------------
 def main():
-    print("[INFO] Running dfba_configurator.py (ensure_cell_interactions_for_all updated)")
-    parser = argparse.ArgumentParser(description="Inject dfBA blocks into PhysiCell config using a template cell_definition.")
-    parser.add_argument("--template", "-t", required=True, help="Path to PhysiCell XML template.")
+    print("[INFO] Running dfba_configurator.py (refactored with physicell-settings)")
+    parser = argparse.ArgumentParser(description="Generate PhysiCell config with dFBA blocks from scratch.")
     parser.add_argument("--output", "-o", required=True, help="Path to write updated PhysiCell XML.")
     parser.add_argument("--config", "-c", required=True,
                         help="YAML configuration file with models, SBML paths, exchanges, and parameters.")
     parser.add_argument("--sbml-folder", "-s", default="config", help="Folder containing SBML files (for resolving relative paths).")
-    parser.add_argument("--template-cell", default="", help="Name of the cell_definition in template to use as blueprint. If empty or not provided, uses the first cell_definition found.")
     parser.add_argument("--cell-prefix", default="", help="Optional prefix to prepend to new cell_definition names.")
-    parser.add_argument("--keep-existing-cells", action="store_true", 
-                        help="Keep existing cell_definitions from template. By default, all existing cell_definitions are removed before adding new ones.")
-    parser.add_argument("--keep-existing-densities", action="store_true",
-                        help="Keep existing microenvironment densities (variables). By default existing densities are removed before adding new ones.")
     parser.add_argument("--verbose", action="store_true",
                         help="Enable verbose debug output.")
     args = parser.parse_args()
 
     update_config_with_dfba(
-        args.template,
         args.output,
         args.config,
         args.sbml_folder,
-        args.template_cell,
         cell_prefix=args.cell_prefix,
-        keep_existing_cells=args.keep_existing_cells,
-        keep_existing_densities=args.keep_existing_densities,
         verbose=args.verbose
     )
 
