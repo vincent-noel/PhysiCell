@@ -630,7 +630,7 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
 	
     float current_growth_rate = this->get_growth_rate();
     // std::cout << "Current growth rate: " << current_growth_rate << std::endl;
-    pCell->custom_data["growth_rate"] = current_growth_rate;
+    // pCell->custom_data["growth_rate"] = current_growth_rate;
     // float R_biomass_reaction = this->get_flux_value(this->objective_reaction);
     // float biomass_ub = this->sbml_model.getReactionUpperBound("R_biomass_reaction");
     // float biomass_lb = this->sbml_model.getReactionLowerBound("R_biomass_reaction");
