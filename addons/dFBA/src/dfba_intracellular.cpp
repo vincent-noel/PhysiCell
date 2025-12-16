@@ -285,24 +285,8 @@ void dFBAIntracellular::parse_death_model(pugi::xml_node& parent){
 
 void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& node)
 {
-    std::cout << "===================================================" << std::endl;
-    std::cout << "Parssing dFBA intracellular model" << std::endl;
-    // Getting sbml file name for reading the model
-    pugi::xml_node node_sbml = node.child( "sbml_filename" );
-	if ( node_sbml )
-	{ 
-        this->sbml_filename = PhysiCell::xml_get_my_string_value (node_sbml);
-    }
-    else
-    {
-        std::cout << "Error: attempted to read sbml_filename path but not found." << std::endl;
-        std::cout << "Please double-check your exchange nodes in the XML setting." << std::endl;
-        std::cout << std::endl; 
-        exit(-1); 
-    }
-	
-    // Setting all the rest to default values : Nothing should be kept from the existing intracellular object (NO INHERITANCE)
 
+    // Setting all the rest to default values : Nothing should be kept from the existing intracellular object (NO INHERITANCE)
     objective_reaction = "";
     cell_density = 0.0;
     max_growth_rate = 0.0;
@@ -316,6 +300,51 @@ void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& no
 	flag_for_death = false;
     sbml_model.clear();
     is_initialized = false;
+
+    std::cout << "===================================================" << std::endl;
+    std::cout << "Parssing dFBA intracellular model" << std::endl;
+    
+    // Parse dFBA sbml_filename and time step from XML settings
+    pugi::xml_node node_settings = node.child("settings");
+    if (node_settings) 
+    {
+        pugi::xml_node node_intracellular_dt = node_settings.child("intracellular_dt");
+        pugi::xml_node node_time_step = node_settings.child("time_step");
+        if (node_intracellular_dt) 
+        {
+            dfba_time_step = PhysiCell::xml_get_my_double_value(node_intracellular_dt);
+        } else if (node_time_step) 
+        {
+            std::cout << "[Warning] The setting 'time_step' is deprecated. Please use 'intracellular_dt' instead." << std::endl;
+            dfba_time_step = PhysiCell::xml_get_my_double_value(node_time_step);
+        } else 
+        {
+            std::cout << "[Warning] No intracellular_dt or time_step specified. Using default value: " << PhysiCell::diffusion_dt << std::endl;
+            dfba_time_step = PhysiCell::diffusion_dt; // Default value
+        }
+        // Getting sbml file name for reading the model
+        pugi::xml_node node_sbml = node_settings.child( "sbml_filename" );
+        if ( node_sbml ) 
+        { 
+            
+            this->sbml_filename = PhysiCell::xml_get_my_string_value (node_sbml);
+        }
+        else
+        {
+            std::cout << "Error: attempted to read sbml_filename path but not found." << std::endl;
+            std::cout << PhysiCell::xml_get_my_string_value(node_sbml) << std::endl;
+            std::cout << "Please double-check your <intracellular> node in the XML setting." << std::endl;
+            std::cout << std::endl; 
+            exit(-1); 
+        }
+    } else 
+    {
+        std::cout << "Error: No settings block found in the XML" << std::endl;
+        std::cout << "Please double-check your intracellular node in the XML setting." << std::endl;
+        std::cout << "intracellular.settings node in the XML setting should include <sbml_filename> and <intracellular_dt>" << std::endl;
+        std::cout << std::endl; 
+        exit(-1); 
+    }
 
     // parsing the transport model
     pugi::xml_node node_transport_model = node.child( "transport_model" );
@@ -372,24 +401,7 @@ void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& no
     }
 
 
-    // Parse dFBA time step from XML settings
-    pugi::xml_node node_settings = node.child("settings");
-    if (node_settings) {
-        pugi::xml_node node_intracellular_dt = node_settings.child("intracellular_dt");
-        pugi::xml_node node_time_step = node_settings.child("time_step");
-        if (node_intracellular_dt) {
-            dfba_time_step = PhysiCell::xml_get_my_double_value(node_intracellular_dt);
-        } else if (node_time_step) {
-            std::cout << "[Warning] The setting 'time_step' is deprecated. Please use 'intracellular_dt' instead." << std::endl;
-            dfba_time_step = PhysiCell::xml_get_my_double_value(node_time_step);
-        } else {
-            std::cout << "[Warning] No intracellular_dt or time_step specified. Using default value: " << PhysiCell::diffusion_dt << std::endl;
-            dfba_time_step = PhysiCell::diffusion_dt; // Default value
-        }
-    } else {
-        std::cout << "[Warning] No intracellular_dt or time_step specified. Using default value: " << PhysiCell::diffusion_dt << std::endl;
-        dfba_time_step = PhysiCell::diffusion_dt; // Default value
-    }
+    // ==============================================================================================
 
     std::cout << "Loading SBML model from: " << this->sbml_filename << std::endl;
     this->sbml_model.initModel(this->sbml_filename.c_str());
@@ -402,7 +414,10 @@ void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& no
         // TODO
         // check this ex_strut.density_index is a defined density at Microenviroment
         dFBAReaction* rxn = this->sbml_model.getReaction(ex_strut.fba_flux_id);
-        assert( rxn != nullptr );
+        if( rxn == nullptr ){
+            std::cout << "Error: exchange reaction not found in model: " << ex_strut.fba_flux_id << " for substrate " << substrate_name << std::endl;
+            exit(-1);
+        }
     }
     dFBAReaction* growth_rxn = this->sbml_model.getReaction(this->objective_reaction);
     assert( growth_rxn != nullptr );
@@ -615,7 +630,7 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
 	
     float current_growth_rate = this->get_growth_rate();
     // std::cout << "Current growth rate: " << current_growth_rate << std::endl;
-    pCell->custom_data["growth_rate"] = current_growth_rate;
+    // pCell->custom_data["growth_rate"] = current_growth_rate;
     // float R_biomass_reaction = this->get_flux_value(this->objective_reaction);
     // float biomass_ub = this->sbml_model.getReactionUpperBound("R_biomass_reaction");
     // float biomass_lb = this->sbml_model.getReactionLowerBound("R_biomass_reaction");

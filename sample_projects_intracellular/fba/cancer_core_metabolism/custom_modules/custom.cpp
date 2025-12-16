@@ -244,7 +244,7 @@ std::vector<std::string> my_coloring_function( Cell* pCell )
 		output[0] = "rgb(0,0,255)"; output[1] = "rgb(0,0,255)"; output[2] = "rgb(0,0,255)";
 		return output;
 	}
-	double growth_rate = pCell->custom_data["growth_rate"];
+	double growth_rate = 1.0;
 	if (growth_rate > 0.0)
 	{
 		output[0] = "rgb(0,255,0)"; output[1] = "rgb(0,255,0)"; output[2] = "rgb(0,255,0)";
