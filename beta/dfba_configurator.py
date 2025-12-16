@@ -363,8 +363,8 @@ def ensure_cell_interactions_for_all(cell_def, all_cell_names, verbose=False):
         return block
 
     lpr = _build_block(ci, 'live_phagocytosis_rates', 'phagocytosis_rate', collected['phagocytosis_rate'])
-    ar = _build_block(ci, 'attack_rates', 'attack_rate', collected['attack_rate'])
-    fr = _build_block(ci, 'fusion_rates', 'fusion_rate', collected['fusion_rate'])
+    ar  = _build_block(ci, 'attack_rates', 'attack_rate', collected['attack_rate'])
+    fr  = _build_block(ci, 'fusion_rates', 'fusion_rate', collected['fusion_rate'])
 
     if verbose:
         print(f"[DEBUG] Built unified 'cell_interactions' for '{cell_name}': lpr={list(collected['phagocytosis_rate'].keys())}, ar={list(collected['attack_rate'].keys())}, fr={list(collected['fusion_rate'].keys())}")
@@ -690,6 +690,14 @@ def update_config_with_dfba(template_xml_path,
             microenv.remove(v)
         if vars_found:
             print(f"[INFO] Removed {len(vars_found)} existing microenvironment variable(s) (densities) because keep_existing_densities=False")
+        # remove any existing plot_substrate entries under microenvironment_setup
+        plot_nodes = microenv.findall("plot_substrate")
+        for p in plot_nodes:
+            parent = p.getparent()
+            if parent is not None:
+                parent.remove(p)
+        if vars_found or plot_nodes:
+            print(f"[INFO] Removed {len(vars_found)} existing microenvironment variable(s) and {len(plot_nodes)} plot_substrate(s) because keep_existing_densities=False")
     else:
         existing_vars = {v.get("name") for v in microenv.findall("variable")}
     
@@ -815,6 +823,29 @@ def update_config_with_dfba(template_xml_path,
         name = cell.get("name")
         if verbose:
             print(f"[DEBUG] Processing cell_definition: '{name}'")
+        # If we're not keeping existing densities, remove existing secretion
+        # substrate blocks and chemotactic sensitivity entries so they can be
+        # rebuilt cleanly for the new substrate list.
+        if not keep_existing_densities:
+            phenotype = cell.find("./phenotype")
+            if phenotype is not None:
+                # remove secretion substrates
+                secretion = phenotype.find("secretion")
+                if secretion is not None:
+                    for sub in list(secretion.findall("substrate")):
+                        secretion.remove(sub)
+                # remove chemotactic sensitivities
+                motility = phenotype.find("motility")
+                if motility is not None:
+                    options = motility.find("options")
+                    if options is not None:
+                        adv = options.find("advanced_chemotaxis")
+                        if adv is not None:
+                            chems = adv.find("chemotactic_sensitivities")
+                            if chems is not None:
+                                for cs in list(chems.findall("chemotactic_sensitivity")):
+                                    chems.remove(cs)
+
         # ensure secretion contains all substrates
         for s in global_substrates_sorted:
             ensure_secretion_has_substrate(cell, s)
