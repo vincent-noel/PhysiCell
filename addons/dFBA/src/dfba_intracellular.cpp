@@ -414,7 +414,10 @@ void dFBAIntracellular::initialize_intracellular_from_pugixml(pugi::xml_node& no
         // TODO
         // check this ex_strut.density_index is a defined density at Microenviroment
         dFBAReaction* rxn = this->sbml_model.getReaction(ex_strut.fba_flux_id);
-        assert( rxn != nullptr );
+        if( rxn == nullptr ){
+            std::cout << "Error: exchange reaction not found in model: " << ex_strut.fba_flux_id << " for substrate " << substrate_name << std::endl;
+            exit(-1);
+        }
     }
     dFBAReaction* growth_rxn = this->sbml_model.getReaction(this->objective_reaction);
     assert( growth_rxn != nullptr );
