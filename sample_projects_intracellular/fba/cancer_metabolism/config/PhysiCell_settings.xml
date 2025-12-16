@@ -284,8 +284,8 @@
                     <damage_repair_rate units="1/min">0.0</damage_repair_rate>
                 </cell_integrity>
                 <intracellular type="dfba">
-                    <sbml_filename>/home/mruscone/Desktop/github/PhysiCelldFBA/config/Recon2.2_FBC_trimmed_final.xml</sbml_filename>
                     <settings>
+                        <sbml_filename>config/Recon2.2_FBC_trimmed_final.xml</sbml_filename>
                         <intracellular_dt units="min">6</intracellular_dt>
                     </settings>
                     <transport_model>
