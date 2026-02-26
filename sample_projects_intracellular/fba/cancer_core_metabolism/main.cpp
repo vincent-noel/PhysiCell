@@ -182,6 +182,12 @@ int main( int argc, char* argv[] )
 	}
 	
 	// main loop 
+	int total_iter = 5;
+	for (int i=0; i < total_iter; i++ )
+	{
+		std::cout << "Hello, PhysiCell! This is a test of the main loop. Iteration " << i << std::endl;
+		microenvironment.simulate_diffusion_decay( diffusion_dt ); 
+	}
 	
 	try 
 	{		
