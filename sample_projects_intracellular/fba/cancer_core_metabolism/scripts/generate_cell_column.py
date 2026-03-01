@@ -58,11 +58,11 @@ CELL_VOLUME: float = 2494.0
 X_START: float = 0.0          # [micron] – first cell position on the X axis
 
 # Domain boundaries (must match <domain> block in PhysiCell_settings.xml)
-X_MAX: float = 1250.0         # [micron]
-Y_MIN: float = -250.0         # [micron]
-Y_MAX: float =  250.0         # [micron]
-Z_MIN: float = -250.0         # [micron]
-Z_MAX: float =  250.0         # [micron]
+X_MAX: float = 1500.0         # [micron]
+Y_MIN: float = -150.0         # [micron]
+Y_MAX: float =  150.0         # [micron]
+Z_MIN: float = -20.0         # [micron]
+Z_MAX: float =  20.0         # [micron]
 
 # No Y/Z centre needed: cells fill the entire YZ plane at every voxel.
 

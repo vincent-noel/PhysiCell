@@ -21,7 +21,7 @@
     <use_2D>false</use_2D>
   </domain>
   <overall>
-    <max_time units="min">5.0</max_time>
+    <max_time units="min">1440</max_time>
     <time_units>min</time_units>
     <space_units>micron</space_units>
     <dt_diffusion units="min">0.01</dt_diffusion>
@@ -34,11 +34,11 @@
   <save>
     <folder>output</folder>
     <full_data>
-      <interval units="min">1</interval>
+      <interval units="min">30</interval>
       <enable>true</enable>
     </full_data>
     <SVG>
-      <interval units="min">5</interval>
+      <interval units="min">30</interval>
       <enable>false</enable>
       <plot_substrate enabled="true" limits="false">
             <substrate>O2</substrate>
@@ -69,13 +69,13 @@
     </options>
     <variable name="Ammonium" units="dimensionless" ID="0">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">117000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
-      <Dirichlet_boundary_condition units="mM" enabled="true">0.0</Dirichlet_boundary_condition>
+      <Dirichlet_boundary_condition units="mM" enabled="false">0.0</Dirichlet_boundary_condition>
       <Dirichlet_options>
-        <boundary_value ID="xmin" enabled="true">0.0</boundary_value>
+        <boundary_value ID="xmin" enabled="false">0.0</boundary_value>
         <boundary_value ID="xmax" enabled="false">0.0</boundary_value>
         <boundary_value ID="ymin" enabled="false">0.0</boundary_value>
         <boundary_value ID="ymax" enabled="false">0.0</boundary_value>
@@ -85,7 +85,7 @@
     </variable>
     <variable name="CO2" units="dimensionless" ID="1">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">115000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -117,7 +117,7 @@
     </variable>
     <variable name="Citrate" units="dimensionless" ID="3">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">36000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -133,7 +133,7 @@
     </variable>
     <variable name="D-Glucose" units="dimensionless" ID="4">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">40000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -149,7 +149,7 @@
     </variable>
     <variable name="Glycine" units="dimensionless" ID="5">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">63000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -165,7 +165,7 @@
     </variable>
     <variable name="L-Alanine" units="dimensionless" ID="6">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">58000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -181,7 +181,7 @@
     </variable>
     <variable name="L-Arginine" units="dimensionless" ID="7">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">43000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -213,13 +213,13 @@
     </variable>
     <variable name="L-Aspartate" units="dimensionless" ID="9">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">54000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
-      <Dirichlet_boundary_condition units="mM" enabled="true">0.0</Dirichlet_boundary_condition>
+      <Dirichlet_boundary_condition units="mM" enabled="false">0.0</Dirichlet_boundary_condition>
       <Dirichlet_options>
-        <boundary_value ID="xmin" enabled="true">0.0</boundary_value>
+        <boundary_value ID="xmin" enabled="false">0.0</boundary_value>
         <boundary_value ID="xmax" enabled="false">0.0</boundary_value>
         <boundary_value ID="ymin" enabled="false">0.0</boundary_value>
         <boundary_value ID="ymax" enabled="false">0.0</boundary_value>
@@ -229,7 +229,7 @@
     </variable>
     <variable name="L-Glutamate" units="dimensionless" ID="10">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">45000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -261,7 +261,7 @@
     </variable>
     <variable name="L-Isoleucine" units="dimensionless" ID="12">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">46000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -277,7 +277,7 @@
     </variable>
     <variable name="L-Lactate" units="dimensionless" ID="13">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">60000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -309,7 +309,7 @@
     </variable>
     <variable name="L-Lysine" units="dimensionless" ID="15">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">45000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -325,7 +325,7 @@
     </variable>
     <variable name="L-Malate" units="dimensionless" ID="16">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">45000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -341,7 +341,7 @@
     </variable>
     <variable name="L-Phenylalanine" units="dimensionless" ID="17">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">42000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -357,7 +357,7 @@
     </variable>
     <variable name="L-Proline" units="dimensionless" ID="18">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">55800.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -373,7 +373,7 @@
     </variable>
     <variable name="L-Serine" units="dimensionless" ID="19">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">57000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -389,7 +389,7 @@
     </variable>
     <variable name="L-Threonine" units="dimensionless" ID="20">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">54000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -405,7 +405,7 @@
     </variable>
     <variable name="L-Tryptophan" units="dimensionless" ID="21">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">39000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -421,7 +421,7 @@
     </variable>
     <variable name="L-Tyrosine" units="dimensionless" ID="22">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">40000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -437,7 +437,7 @@
     </variable>
     <variable name="L-Valine" units="dimensionless" ID="23">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">51000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -469,7 +469,7 @@
     </variable>
     <variable name="Ornithine" units="dimensionless" ID="25">
       <physical_parameter_set>
-        <diffusion_coefficient units="micron^2/min">50000.0</diffusion_coefficient>
+        <diffusion_coefficient units="micron^2/min">48000.0</diffusion_coefficient>
         <decay_rate units="1/min">0.0</decay_rate>
       </physical_parameter_set>
       <initial_condition units="mM">0.0</initial_condition>
@@ -996,12 +996,12 @@
     <initial_conditions>
         <cell_positions type="csv" enabled="true">
             <folder>./config</folder>
-            <filename>cells.csv</filename>
+            <filename>cells_column.csv</filename>
         </cell_positions>
     </initial_conditions>
   <user_parameters>
     <random_seed type="int" units="dimensionless" description="">50</random_seed>
-    <colony_radius type="double" units="micron" description="">30.0</colony_radius>
     <number_of_cells type="int" units="" description="">0</number_of_cells>
+    <diffusion_steps type="int" units="" description="">300</diffusion_steps>
   </user_parameters>
 </PhysiCell_settings>

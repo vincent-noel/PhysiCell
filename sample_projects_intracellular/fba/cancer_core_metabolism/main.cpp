@@ -182,7 +182,7 @@ int main( int argc, char* argv[] )
 	}
 	
 	// main loop 
-	int total_iter = 5;
+	int total_iter = parameters.ints("diffusion_steps");
 	for (int i=0; i < total_iter; i++ )
 	{
 		std::cout << "Hello, PhysiCell! This is a test of the main loop. Iteration " << i << std::endl;
