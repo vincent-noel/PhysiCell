@@ -14,7 +14,7 @@
     </domain>
 
     <overall>
-        <max_time units="min">7200</max_time>
+        <max_time units="min">720</max_time>
         <time_units>min</time_units>
         <space_units>micron</space_units>
         <dt_diffusion units="min">0.01</dt_diffusion>
@@ -29,11 +29,11 @@
     <save>
         <folder>output</folder>
         <full_data>
-            <interval units="min">60</interval>
+            <interval units="min">12</interval>
             <enable>true</enable>
         </full_data>
         <SVG>
-            <interval units="min">60</interval>
+            <interval units="min">12</interval>
             <enable>true</enable>
             <plot_substrate enabled="false" limits="false">
                 <substrate>oxygen</substrate>
@@ -238,18 +238,18 @@
                     <damage_repair_rate units="1/min">0.0</damage_repair_rate>
                 </cell_integrity>
                 <intracellular type="dfba">
-                    <sbml_filename>./config/hepatonet.xml</sbml_filename>
                     <settings>
-                        <intracellular_dt units="min">6</intracellular_dt>
+                        <sbml_filename>./config/hepatonet.xml</sbml_filename>
+                        <intracellular_dt units="min">2</intracellular_dt>
                     </settings>
                     <transport_model>
                         <exchange substrate="oxygen">
-                            <fba_flux>EX_HC00017_s</fba_flux>
+                            <fba_flux>r0855</fba_flux>
                             <Km units="mM">0.5</Km>
                             <Vmax units="fmol/pg DW cell/min">20</Vmax>
                         </exchange>
                         <exchange substrate="glucose">
-                            <fba_flux>EX_HC00040_s</fba_flux>
+                            <fba_flux>r1032</fba_flux>
                             <Km units="mM">0.5</Km>
                             <Vmax units="fmol/pg DW cell/min">10</Vmax>
                         </exchange>
@@ -257,7 +257,7 @@
                     <growth_model>
                         <cell_density units="g/ml">1.05</cell_density>
                         <reference_volume units="pg">2494</reference_volume>
-                        <max_growth_rate units="1/min">1e-4</max_growth_rate>
+                        <max_growth_rate units="1/min">1000</max_growth_rate>
                         <objective_reaction>r1388</objective_reaction>
                     </growth_model>
                 </intracellular>
@@ -433,18 +433,18 @@
                     <damage_repair_rate units="1/min">0.0</damage_repair_rate>
                 </cell_integrity>
                 <intracellular type="dfba">
-                    <sbml_filename>./config/hepatonet.xml</sbml_filename>
                     <settings>
-                        <intracellular_dt units="min">6</intracellular_dt>
+                        <sbml_filename>./config/hepatonet.xml</sbml_filename>
+                        <intracellular_dt units="min">2</intracellular_dt>
                     </settings>
                     <transport_model>
                         <exchange substrate="oxygen">
-                            <fba_flux>EX_HC00017_s</fba_flux>
+                            <fba_flux>r0855</fba_flux>
                             <Km units="mM">0.5</Km>
                             <Vmax units="fmol/pg DW cell/min">20</Vmax>
                         </exchange>
                         <exchange substrate="glucose">
-                            <fba_flux>EX_HC00040_s</fba_flux>
+                            <fba_flux>r1032</fba_flux>
                             <Km units="mM">0.5</Km>
                             <Vmax units="fmol/pg DW cell/min">10</Vmax>
                         </exchange>
@@ -452,7 +452,7 @@
                     <growth_model>
                         <cell_density units="g/ml">1.05</cell_density>
                         <reference_volume units="pg">2494</reference_volume>
-                        <max_growth_rate units="1/min">1e-4</max_growth_rate>
+                        <max_growth_rate units="1/min">1000</max_growth_rate>
                         <objective_reaction>r1388</objective_reaction>
                     </growth_model>
                 </intracellular>
@@ -628,18 +628,18 @@
                     <damage_repair_rate units="1/min">0.0</damage_repair_rate>
                 </cell_integrity>
                 <intracellular type="dfba">
-                    <sbml_filename>./config/hepatonet.xml</sbml_filename>
                     <settings>
-                        <intracellular_dt units="min">6</intracellular_dt>
+                        <sbml_filename>./config/hepatonet.xml</sbml_filename>
+                        <intracellular_dt units="min">2</intracellular_dt>
                     </settings>
                     <transport_model>
                         <exchange substrate="oxygen">
-                            <fba_flux>EX_HC00017_s</fba_flux>
+                            <fba_flux>r0855</fba_flux>
                             <Km units="mM">0.5</Km>
                             <Vmax units="fmol/pg DW cell/min">20</Vmax>
                         </exchange>
                         <exchange substrate="glucose">
-                            <fba_flux>EX_HC00040_s</fba_flux>
+                            <fba_flux>r1032</fba_flux>
                             <Km units="mM">0.5</Km>
                             <Vmax units="fmol/pg DW cell/min">10</Vmax>
                         </exchange>
@@ -647,7 +647,7 @@
                     <growth_model>
                         <cell_density units="g/ml">1.05</cell_density>
                         <reference_volume units="pg">2494</reference_volume>
-                        <max_growth_rate units="1/min">1e-4</max_growth_rate>
+                        <max_growth_rate units="1/min">1000</max_growth_rate>
                         <objective_reaction>r1388</objective_reaction>
                     </growth_model>
                 </intracellular>

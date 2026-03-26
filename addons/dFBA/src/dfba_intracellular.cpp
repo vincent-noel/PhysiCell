@@ -525,7 +525,7 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
         double total_substrate = substrate_conc * dV * liter_micron_cubes_conversion; // mmol
         // check if the we are taking more than what is stored in the voxel
 
-        // std::cout << "Substrate: " << substrate_name << " -- Total substrate in voxel: " << total_substrate << " mmol," << "Total concentration: " << substrate_conc << " mM, Total uptake requested: " << total_uptake << " mmol. Uptake rate: " << uptake_rate << " mmol/gDW/h" << std::endl;
+        std::cout << "Substrate: " << substrate_name << " -- Total substrate in voxel: " << total_substrate << " mmol," << "Total concentration: " << substrate_conc << " mM, Total uptake requested: " << total_uptake << " mmol. Uptake rate: " << uptake_rate << " mmol/gDW/h" << std::endl;
 
         const double epsilon = 1e-18;
         if (total_uptake > 0.0 && total_uptake > total_substrate + epsilon) {
@@ -538,7 +538,7 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
 
         // Change sign to use as lower bound of the exchange flux
         double exchange_flux_lb = -1 * uptake_rate;
-        // std::cout << "Substrate: " << substrate_name << " Density: " << substrate_conc << " Vmax: " << Vmax << " Km: " << Km << " Max Uptake rate (mmol/gDW/h): " << uptake_rate <<  " Exchange flux LB: " << exchange_flux_lb << std::endl;
+        std::cout << "Substrate: " << substrate_name << " Density: " << substrate_conc << " Vmax: " << Vmax << " Km: " << Km << " Max Uptake rate (mmol/gDW/h): " << uptake_rate <<  " Exchange flux LB: " << exchange_flux_lb << std::endl;
         // Updateing the lower bound of the corresponding exchange flux
         this->sbml_model.setReactionLowerBound(ex_strut.fba_flux_id, exchange_flux_lb);
 
@@ -548,6 +548,18 @@ void dFBAIntracellular::update_dfba_inputs( PhysiCell::Cell* pCell, PhysiCell::P
 void dFBAIntracellular::update(){
     // Only run dFBA if current_time >= next_dfba_run
     dFBASolution solution = this->sbml_model.optimize();
+
+        // DEBUG — remover posteriormente
+    std::cout << "[dFBA] status=" << solution.status 
+              << " growth=" << solution.getObjectiveValue() << std::endl;
+    for(auto& it : this->substrate_exchanges){
+        dFBAReaction* rxn = this->sbml_model.getReaction(it.second.fba_flux_id);
+        if(rxn) std::cout << "[dFBA]   " << it.second.fba_flux_id 
+                          << " lb=" << rxn->getLowerBound()
+                          << " flux=" << rxn->getFluxValue() << std::endl;
+    }
+    // FIM DEBUG
+
     //next_dfba_run = PhysiCell::PhysiCell_globals.current_time + dfba_time_step;
     if (solution.status == "infeasible"){
         //std::cout << "I'm dead from the metabolic point of view" << std::endl;
@@ -562,6 +574,70 @@ void dFBAIntracellular::update(){
         this->current_growth_rate = solution.getObjectiveValue();
         this->flag_for_death = false;
     }
+}
+
+void dFBAIntracellular::save_fluxes_to_csv(PhysiCell::Cell* pCell, double current_time, std::string output_folder)
+{
+    static bool header_summary = false;
+    std::string path_summary = output_folder + "/fba_summary.csv";
+    std::ofstream f_summary;
+
+    if (!header_summary) {
+        f_summary.open(path_summary, std::ios::out);
+        f_summary << "time,cell_id,cell_type,x,y,growth_rate,obj_flux";
+        for (auto& it : this->substrate_exchanges)
+            f_summary << "," << it.second.density_name << "_flux";
+        f_summary << "\n";
+        header_summary = true;
+    } else {
+        f_summary.open(path_summary, std::ios::app);
+    }
+
+    f_summary << current_time 
+              << "," << pCell->ID 
+              << "," << pCell->type_name
+              << "," << pCell->position[0] 
+              << "," << pCell->position[1]
+              << "," << this->current_growth_rate;
+
+    dFBAReaction* obj = this->sbml_model.getReaction(this->objective_reaction);
+    f_summary << "," << (obj ? obj->getFluxValue() : 0.0);
+
+    for (auto& it : this->substrate_exchanges) {
+        dFBAReaction* rxn = this->sbml_model.getReaction(it.second.fba_flux_id);
+        f_summary << "," << (rxn ? rxn->getFluxValue() : 0.0);
+    }
+    f_summary << "\n";
+    f_summary.close();
+
+    static bool header_exchanges = false;
+    std::string path_exchanges = output_folder + "/fba_exchanges.csv";
+    std::ofstream f_exchanges;
+
+    if (!header_exchanges) {
+        f_exchanges.open(path_exchanges, std::ios::out);
+        f_exchanges << "time,cell_id,cell_type,substrate,fba_reaction,flux_lb,flux_value,concentration_mM\n";
+        header_exchanges = true;
+    } else {
+        f_exchanges.open(path_exchanges, std::ios::app);
+    }
+
+    std::vector<double> density_vector = pCell->nearest_density_vector();
+    for (auto& it : this->substrate_exchanges) {
+        ExchangeFluxData ex = it.second;
+        dFBAReaction* rxn = this->sbml_model.getReaction(ex.fba_flux_id);
+        double conc = density_vector[ex.density_index];
+        f_exchanges << current_time
+                    << "," << pCell->ID
+                    << "," << pCell->type_name
+                    << "," << ex.density_name
+                    << "," << ex.fba_flux_id
+                    << "," << (rxn ? rxn->getLowerBound() : 0.0)
+                    << "," << (rxn ? rxn->getFluxValue() : 0.0)
+                    << "," << conc
+                    << "\n";
+    }
+    f_exchanges.close();
 }
 
 void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt )
@@ -707,7 +783,7 @@ void dFBAIntracellular::update_dfba_outputs(PhysiCell::Cell* pCell, PhysiCell::P
         {
             phenotype.molecular.internalized_total_substrates[density_index] = 0;
         }
-        // print_model(pCell, dt, "./output");
+            save_fluxes_to_csv(pCell, PhysiCell::PhysiCell_globals.current_time, "./output");
     }
 
     return;

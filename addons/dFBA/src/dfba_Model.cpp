@@ -409,6 +409,11 @@ void dFBAModel::readSBMLModel(const char* sbmlFileName)
         }
         else {
             std::cout << "WARNING: No FBC plugin found for reaction " << sbml_reaction->getId() << std::endl;
+            if (sbml_reaction->getReversible())
+                reaction->setLowerBound(-1000.0);
+            else
+                reaction->setLowerBound(0.0);
+            reaction->setUpperBound(1000.0);
         }
         int numReactans = sbml_reaction->getNumReactants();
         for(int j = 0; j < numReactans; j++)
