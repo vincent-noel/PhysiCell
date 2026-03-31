@@ -146,15 +146,23 @@ void Cell_Container::update_all_cells(double t, double phenotype_dt_ , double me
 	{
 		if( (*all_cells)[i]->is_out_of_domain == false && initialzed ) {
 
-			if( (*all_cells)[i]->phenotype.intracellular != NULL  && (*all_cells)[i]->phenotype.intracellular->need_update())
+			if( (*all_cells)[i]->phenotype.intracellulars.size() > 0) 
 			{
-				if ((*all_cells)[i]->functions.pre_update_intracellular != NULL)
-					(*all_cells)[i]->functions.pre_update_intracellular( (*all_cells)[i], (*all_cells)[i]->phenotype , diffusion_dt_ );
+				for (auto * intracellular: (*all_cells)[i]->phenotype.intracellulars) 
+				{
+					if (intracellular->need_update()) 
+					{
+						if (intracellular->pre_update_intracellular != NULL)
+							(intracellular->pre_update_intracellular)( (*all_cells)[i], (*all_cells)[i]->phenotype , intracellular, diffusion_dt_ ); 
 
-				(*all_cells)[i]->phenotype.intracellular->update( (*all_cells)[i], (*all_cells)[i]->phenotype , diffusion_dt_ );
+						intracellular->update( (*all_cells)[i], (*all_cells)[i]->phenotype , diffusion_dt_ );
 
-				if ((*all_cells)[i]->functions.post_update_intracellular != NULL)
-					(*all_cells)[i]->functions.post_update_intracellular( (*all_cells)[i], (*all_cells)[i]->phenotype , diffusion_dt_ );
+						if (intracellular->post_update_intracellular != NULL)
+							(intracellular->post_update_intracellular)( (*all_cells)[i], (*all_cells)[i]->phenotype , intracellular, diffusion_dt_ ); 
+
+					}
+				}
+				
 			}
 		}
 	}

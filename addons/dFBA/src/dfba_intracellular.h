@@ -74,6 +74,8 @@ class dFBAIntracellular : public PhysiCell::Intracellular
 	bool need_update();
     
 	void update(){ };
+	// This function deals with inheritance from mother to daughter cells
+	void inherit(PhysiCell::Intracellular * intracellular){ return;};
 
 	void update(PhysiCell::Cell* pCell, PhysiCell::Phenotype& phenotype, double dt);
     void inherit(PhysiCell::Cell * cell) {}
