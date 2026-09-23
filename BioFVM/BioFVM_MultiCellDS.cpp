@@ -81,6 +81,7 @@ MultiCellDS_Metadata BioFVM_metadata;
 
 bool save_mesh_as_matlab = true; 
 bool save_density_data_as_matlab = true;
+bool save_microenvironment = true; // false: keep the mesh, skip the densities
 bool save_cells_as_custom_matlab = true; 
 bool save_cell_data = true; 
 		
@@ -675,59 +676,62 @@ void add_BioFVM_substrates_to_open_xml_pugi( pugi::xml_document& xml_dom , std::
 		}
 		node = node.parent(); 
 		
-		// create space for the data 
-		// write out the voxels -- minimal data, even if redundant for cartesian 
-		node = node.append_child( "data" ); 
-		attrib = node.append_attribute("type");
-		if( save_density_data_as_matlab == false )
+		if( save_microenvironment )
 		{
-			attrib.set_value( "xml" ); 
-			
-			// create the DOM structure, make it big enough 
-			int datum_size = 16; // enough for sprintf default 6 decimal places + period + 5 leading figs (safety) + delimiter + 2 chars safety = 15
-			int data_size = datum_size * M.number_of_densities(); 
-			
-			char* buffer; 
-			buffer = new char [data_size]; 
-			for( unsigned int j=0 ; j < M.mesh.voxels.size() ; j++ )
+			// create space for the data 
+			// write out the voxels -- minimal data, even if redundant for cartesian 
+			node = node.append_child( "data" ); 
+			attrib = node.append_attribute("type");
+			if( save_density_data_as_matlab == false )
 			{
-				vector_to_list( M.density_vector(j) , buffer , ' ' ); 
-				node = node.append_child( "data_vector"); 
-				attrib = node.append_attribute( "voxel_ID" ); 
-				attrib.set_value( M.mesh.voxels[j].mesh_index ); 
-				attrib = node.append_attribute( "delimiter" ); 
-				attrib.set_value( " " ); 
+				attrib.set_value( "xml" ); 
+			
+				// create the DOM structure, make it big enough 
+				int datum_size = 16; // enough for sprintf default 6 decimal places + period + 5 leading figs (safety) + delimiter + 2 chars safety = 15
+				int data_size = datum_size * M.number_of_densities(); 
+			
+				char* buffer; 
+				buffer = new char [data_size]; 
+				for( unsigned int j=0 ; j < M.mesh.voxels.size() ; j++ )
+				{
+					vector_to_list( M.density_vector(j) , buffer , ' ' ); 
+					node = node.append_child( "data_vector"); 
+					attrib = node.append_attribute( "voxel_ID" ); 
+					attrib.set_value( M.mesh.voxels[j].mesh_index ); 
+					attrib = node.append_attribute( "delimiter" ); 
+					attrib.set_value( " " ); 
 				
-				node.append_child( pugi::node_pcdata ).set_value( buffer ); 
+					node.append_child( pugi::node_pcdata ).set_value( buffer ); 
+					node = node.parent(); 
+				}
+				delete [] buffer; 			
+			
+			}
+			else
+			{
+				attrib.set_value( "matlab"); 
+			
+				node = node.append_child( "filename" ); 
+				// say where the data are stored, and store them;
+				char filename [1024]; 
+				sprintf( filename , "%s_microenvironment%d.mat" , filename_base.c_str() , 0 ); 
+				M.write_to_matlab( filename ); 
+			
+				/* store filename without the relative pathing (if any) */ 
+				char filename_without_pathing [1024];
+				char* filename_start = strrchr( filename , '/' ); 
+				if( filename_start == NULL )
+				{ filename_start = filename; }
+				else	
+				{ filename_start++; } 
+				strcpy( filename_without_pathing , filename_start ); 
+			
+				node.append_child( pugi::node_pcdata ).set_value( filename_without_pathing ); // filename ); 
+			
 				node = node.parent(); 
 			}
-			delete [] buffer; 			
-			
-		}
-		else
-		{
-			attrib.set_value( "matlab"); 
-			
-			node = node.append_child( "filename" ); 
-			// say where the data are stored, and store them;
-			char filename [1024]; 
-			sprintf( filename , "%s_microenvironment%d.mat" , filename_base.c_str() , 0 ); 
-			M.write_to_matlab( filename ); 
-			
-			/* store filename without the relative pathing (if any) */ 
-			char filename_without_pathing [1024];
-			char* filename_start = strrchr( filename , '/' ); 
-			if( filename_start == NULL )
-			{ filename_start = filename; }
-			else	
-			{ filename_start++; } 
-			strcpy( filename_without_pathing , filename_start ); 
-			
-			node.append_child( pugi::node_pcdata ).set_value( filename_without_pathing ); // filename ); 
-			
 			node = node.parent(); 
 		}
-		node = node.parent(); 
 		
 		BioFVM_substrates_initialized_in_dom = true; 
 		
@@ -738,54 +742,57 @@ void add_BioFVM_substrates_to_open_xml_pugi( pugi::xml_document& xml_dom , std::
 	
 	// populate the data values 
 	
-	node = node.child( "domain" ); 
-	node = node.child( "data" ); 
+	if( save_microenvironment )
+	{
+		node = node.child( "domain" ); 
+		node = node.child( "data" ); 
 	
-	if( save_density_data_as_matlab == false )
-	{
-		// create the DOM structure, make it big enough 
-		int datum_size = 16; // enough for sprintf default 6 decimal places + period + 5 leading figs (safety) + delimiter + 2 chars safety = 15
-		int data_size = datum_size * M.number_of_densities(); 
-		
-		char* buffer; 
-		buffer = new char [data_size]; 
-		node = node.child( "data_vector" );
-		for( unsigned int j=0 ; j < M.mesh.voxels.size() ; j++ )
+		if( save_density_data_as_matlab == false )
 		{
-			vector_to_list( M.density_vector(j) , buffer , ' ' ); 
-			node = node.first_child(); 
+			// create the DOM structure, make it big enough 
+			int datum_size = 16; // enough for sprintf default 6 decimal places + period + 5 leading figs (safety) + delimiter + 2 chars safety = 15
+			int data_size = datum_size * M.number_of_densities(); 
+		
+			char* buffer; 
+			buffer = new char [data_size]; 
+			node = node.child( "data_vector" );
+			for( unsigned int j=0 ; j < M.mesh.voxels.size() ; j++ )
+			{
+				vector_to_list( M.density_vector(j) , buffer , ' ' ); 
+				node = node.first_child(); 
 			
-			node.set_value( buffer ); 
+				node.set_value( buffer ); 
+				node = node.parent(); 
+			
+				node = node.next_sibling(); 
+			}
 			node = node.parent(); 
-			
-			node = node.next_sibling(); 
+			delete [] buffer; 			
+		
 		}
-		node = node.parent(); 
-		delete [] buffer; 			
+		else
+		{
+			// say where the data are stored, and store them;
 		
-	}
-	else
-	{
-		// say where the data are stored, and store them;
+			node = node.child( "filename" );
 		
-		node = node.child( "filename" );
+			char filename [1024]; 
+			sprintf( filename , "%s_microenvironment%d.mat" , filename_base.c_str() , 0 ); 
+			M.write_to_matlab( filename ); 
 		
-		char filename [1024]; 
-		sprintf( filename , "%s_microenvironment%d.mat" , filename_base.c_str() , 0 ); 
-		M.write_to_matlab( filename ); 
+			/* store filename without the relative pathing (if any) */ 
+			char filename_without_pathing [1024];
+			char* filename_start = strrchr( filename , '/' ); 
+			if( filename_start == NULL )
+			{ filename_start = filename; }
+			else	
+			{ filename_start++; } 
+			strcpy( filename_without_pathing , filename_start ); 
 		
-		/* store filename without the relative pathing (if any) */ 
-		char filename_without_pathing [1024];
-		char* filename_start = strrchr( filename , '/' ); 
-		if( filename_start == NULL )
-		{ filename_start = filename; }
-		else	
-		{ filename_start++; } 
-		strcpy( filename_without_pathing , filename_start ); 
-		
-		node = node.first_child(); 
-		node.set_value( filename_without_pathing ); // filename ); 
-		node = node.parent(); 
+			node = node.first_child(); 
+			node.set_value( filename_without_pathing ); // filename ); 
+			node = node.parent(); 
+		}
 	}
 	
 	return; 

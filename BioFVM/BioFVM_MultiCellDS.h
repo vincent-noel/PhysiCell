@@ -78,6 +78,7 @@ extern int MultiCellDS_digital_cell_line_code;
 
 extern bool save_mesh_as_matlab; 
 extern bool save_density_data_as_matlab;
+extern bool save_microenvironment;
 extern bool save_cells_as_custom_matlab; 
 extern bool save_cell_data; 
 

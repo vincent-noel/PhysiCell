@@ -138,6 +138,7 @@ void save_PhysiCell_to_MultiCellDS_v2( std::string filename_base , Microenvironm
 		// save metadata 
 	BioFVM_metadata.add_to_open_xml_pugi( current_simulation_time , BioFVM::biofvm_doc ); 
 		// save diffusing substrates 
+	BioFVM::save_microenvironment = PhysiCell_settings.save_microenvironment; 
 	add_BioFVM_substrates_to_open_xml_pugi( BioFVM::biofvm_doc , filename_base, M  ); 
 
 		// add_BioFVM_agents_to_open_xml_pugi( xml_dom , filename_base, M); 
@@ -721,297 +722,307 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 		root = root.parent(); // root = cellular_information.cell_populations.cell_population.custom.simplified_data  
 	}
 
-	// write data 
-	node = root.child( "filename" ); 
-	if( !node )
-	{
-		node = root.append_child( "filename" ); 
-	}
+	// each optional section below starts again from here 
+	pugi::xml_node custom_node = root.parent(); // cellular_information.cell_populations.cell_population.custom 
 
-	// write the filename 
-
-	// next, filename 
 	char filename [1024]; 
-	sprintf( filename , "%s_cells.mat" , filename_base.c_str() ); 
-	
-	/* store filename without the relative pathing (if any) */ 
 	char filename_without_pathing [1024];
-	char* filename_start = strrchr( filename , '/' ); 
-	if( filename_start == NULL )
-	{ filename_start = filename; }
-	else	
-	{ filename_start++; } 
-	strcpy( filename_without_pathing , filename_start );  
-	
-	if( !node.first_child() )
+	char* filename_start; 
+
+	if( PhysiCell_settings.save_cell_data )
 	{
-		node.append_child( pugi::node_pcdata ).set_value( filename_without_pathing ); // filename ); 
-	}
-	else
-	{
-		node.first_child().set_value( filename_without_pathing ); // filename ); 
-	}
-
-	// now write the actual data 
-
-	int size_of_each_datum = cell_data_size;
-	int number_of_data_entries = (*all_cells).size();  
-
-	FILE* fp = write_matlab_header( size_of_each_datum, number_of_data_entries,  filename, "cells" );  
-	if( fp == NULL )
-	{ 
-		std::cout << std::endl << "Error: Failed to open " << filename << " for MAT writing." << std::endl << std::endl; 
-
-		std::cout << std::endl << "Error: We're not writing data like we expect. " << std::endl
-		<< "Check to make sure your save directory exists. " << std::endl << std::endl
-		<< "I'm going to exit with a crash code of -1 now until " << std::endl 
-		<< "you fix your directory. Sorry!" << std::endl << std::endl; 
-		exit(-1); 
-	} 
-
-	Cell* pCell; 
-	
-	double dTemp; 
-	// storing data as cols (each column is a cell)
-	for( int i=0; i < number_of_data_entries ; i++ )
-	{
-		pCell = (*all_cells)[i]; 
-
-		int writes = 0; 
-
-		// compatibilty : first 17 entries 
-		// ID 					<label index="0" size="1">ID</label>
-		// double ID_temp = (double) (*all_cells)[i]->ID;
-		// fwrite( (char*) &( ID_temp ) , sizeof(double) , 1 , fp ); 
-
-		// name = "ID"; 
-		dTemp = (double) pCell->ID;
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// name = "position";    NOTE very different syntax for writing vectors!
-        std::fwrite( pCell->position.data() , sizeof(double) , 3 , fp );
-		// name = "total_volume"; 
-		std::fwrite( &( pCell->phenotype.volume.total ) , sizeof(double) , 1 , fp ); 
-		// name = "cell_type"; 
-		dTemp = (double) pCell->type;
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// name = "cycle_model"; 
-		dTemp = (double) pCell->phenotype.cycle.model().code; 
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); // cycle model 
-		// name = "current_phase"; 
-		dTemp = (double) pCell->phenotype.cycle.current_phase().code; 
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); // cycle model 
-		// name = "elapsed_time_in_phase"; 
-		std::fwrite( &( pCell->phenotype.cycle.data.elapsed_time_in_phase ) , sizeof(double) , 1 , fp ); 
-		// name = "nuclear_volume"; 
-		std::fwrite( &( pCell->phenotype.volume.nuclear ) , sizeof(double) , 1 , fp );   
-		// name = "cytoplasmic_volume"; 
-		std::fwrite( &( pCell->phenotype.volume.cytoplasmic ) , sizeof(double) , 1 , fp );
-		// name = "fluid_fraction"; 
-		std::fwrite( &( pCell->phenotype.volume.fluid_fraction ) , sizeof(double) , 1 , fp );
-		// name = "calcified_fraction"; 
-		std::fwrite( &( pCell->phenotype.volume.calcified_fraction ) , sizeof(double) , 1 , fp ); 
-		// name = "orientation"; 
-		std::fwrite( pCell->state.orientation.data() , sizeof(double) , 3 , fp ); 
-		// name = "polarity"; 
-		std::fwrite( &( pCell->phenotype.geometry.polarity ) , sizeof(double) , 1 , fp ); 
-
- /* state variables to save */ 
-// state
-		// name = "velocity"; 
-		std::fwrite( pCell->velocity.data() , sizeof(double) , 3 , fp ); 
-		// name = "pressure"; 
-		std::fwrite( &( pCell->state.simple_pressure ) , sizeof(double) , 1 , fp ); 
-		// name = "number_of_nuclei"; 
-		dTemp = (double) pCell->state.number_of_nuclei; 
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// // name = "damage"; 
-		// std::fwrite( &( pCell->phenotype.integrity.damage ) , sizeof(double) , 1 , fp ); 
-		// name = "total_attack_time"; 
-		std::fwrite( &( pCell->state.total_attack_time ) , sizeof(double) , 1 , fp ); 
-		// name = "contact_with_basement_membrane"; 
-		dTemp = (double) pCell->state.contact_with_basement_membrane; 
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-
-/* now go through phenotype and state */ 
-// cycle 
-  // current exit rate // 1 
-		// name = "current_cycle_phase_exit_rate"; 
-		int phase_index = pCell->phenotype.cycle.data.current_phase_index; 
-		std::fwrite( &( pCell->phenotype.cycle.data.exit_rate(phase_index) ) , sizeof(double) , 1 , fp ); 
-		// name = "elapsed_time_in_phase"; 
-		std::fwrite( &( pCell->phenotype.cycle.data.elapsed_time_in_phase ) , sizeof(double) , 1 , fp ); 
-
-// death 
-  // live or dead state // 1 
-		// name = "dead"; 
-		dTemp = (double) pCell->phenotype.death.dead; 
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// name = "current_death_model"; // 
-		dTemp = (double) pCell->phenotype.death.current_death_model_index; 
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// name = "death_rates"; 
-		std::fwrite( pCell->phenotype.death.rates.data() , sizeof(double) , nd , fp ); 
-		
-	// volume ()
-		// name = "cytoplasmic_biomass_change_rate"; 
-		std::fwrite( &( pCell->phenotype.volume.cytoplasmic_biomass_change_rate ) , sizeof(double) , 1 , fp ); 
-		// name = "nuclear_biomass_change_rate"; 
-		std::fwrite( &( pCell->phenotype.volume.nuclear_biomass_change_rate ) , sizeof(double) , 1 , fp ); 
-		// name = "fluid_change_rate"; 
-		std::fwrite( &( pCell->phenotype.volume.fluid_change_rate ) , sizeof(double) , 1 , fp ); 
-		// name = "calcification_rate"; 
-		std::fwrite( &( pCell->phenotype.volume.calcification_rate ) , sizeof(double) , 1 , fp ); 
-		// name = "target_solid_cytoplasmic"; 
-		std::fwrite( &( pCell->phenotype.volume.target_solid_cytoplasmic ) , sizeof(double) , 1 , fp ); 
-		// name = "target_solid_nuclear"; 
-		std::fwrite( &( pCell->phenotype.volume.target_solid_nuclear ) , sizeof(double) , 1 , fp ); 
-		// name = "target_fluid_fraction"; 
-		std::fwrite( &( pCell->phenotype.volume.target_fluid_fraction ) , sizeof(double) , 1 , fp ); 
-
-  // geometry 
-     // radius //1 
-		// name = "radius"; 
-		std::fwrite( &( pCell->phenotype.geometry.radius ) , sizeof(double) , 1 , fp ); 
-		// name = "nuclear_radius"; 
-		std::fwrite( &( pCell->phenotype.geometry.nuclear_radius ) , sizeof(double) , 1 , fp ); 
-		// name = "surface_area"; 
-		std::fwrite( &( pCell->phenotype.geometry.surface_area ) , sizeof(double) , 1 , fp ); 
-
-  // mechanics 
-	// cell_cell_adhesion_strength; // 1
-		// name = "cell_cell_adhesion_strength"; 
-		std::fwrite( &( pCell->phenotype.mechanics.cell_cell_adhesion_strength ) , sizeof(double) , 1 , fp ); 
-		// name = "cell_BM_adhesion_strength"; 
-		std::fwrite( &( pCell->phenotype.mechanics.cell_BM_adhesion_strength ) , sizeof(double) , 1 , fp ); 
-		// name = "cell_cell_repulsion_strength"; 
-		std::fwrite( &( pCell->phenotype.mechanics.cell_cell_repulsion_strength ) , sizeof(double) , 1 , fp ); 
-		// name = "cell_BM_repulsion_strength"; 
-		std::fwrite( &( pCell->phenotype.mechanics.cell_BM_repulsion_strength ) , sizeof(double) , 1 , fp ); 
-		// name = "cell_adhesion_affinities"; 
-		std::fwrite( pCell->phenotype.mechanics.cell_adhesion_affinities.data() , sizeof(double) , n , fp ); 
-		// name = "relative_maximum_adhesion_distance"; 
-		std::fwrite( &( pCell->phenotype.mechanics.relative_maximum_adhesion_distance ) , sizeof(double) , 1 , fp ); 
-		// name = "maximum_number_of_attachments"; 
-		dTemp = (double) pCell->phenotype.mechanics.maximum_number_of_attachments; 
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// name = "attachment_elastic_constant"; 
-		std::fwrite( &( pCell->phenotype.mechanics.attachment_elastic_constant ) , sizeof(double) , 1 , fp ); 
-		// name = "attachment_rate"; 
-		std::fwrite( &( pCell->phenotype.mechanics.attachment_rate ) , sizeof(double) , 1 , fp ); 
- 		// name = "detachment_rate"; 
-		std::fwrite( &( pCell->phenotype.mechanics.detachment_rate ) , sizeof(double) , 1 , fp ); 
-
- // Motility
- 		// name = "is_motile"; 
-		dTemp = (double) pCell->phenotype.motility.is_motile; 
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
- 		// name = "persistence_time"; 
-		std::fwrite( &( pCell->phenotype.motility.persistence_time ) , sizeof(double) , 1 , fp ); 
- 		// name = "migration_speed"; 
-		std::fwrite( &( pCell->phenotype.motility.migration_speed ) , sizeof(double) , 1 , fp ); 
- 		// name = "migration_bias_direction"; 
-		std::fwrite( pCell->phenotype.motility.migration_bias_direction.data() , sizeof(double) , 3 , fp ); 
- 		// name = "migration_bias"; 
-		std::fwrite( &( pCell->phenotype.motility.migration_bias ) , sizeof(double) , 1 , fp ); 
- 		// name = "motility_vector"; 
-		std::fwrite( pCell->phenotype.motility.motility_vector.data() , sizeof(double) , 3 , fp ); 
- 		// name = "chemotaxis_index"; 
-		dTemp = (double) pCell->phenotype.motility.chemotaxis_index; 
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
- 		// name = "chemotaxis_direction"; 
-		dTemp = (double) pCell->phenotype.motility.chemotaxis_direction; 
-		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
- 		// name = "chemotactic_sensitivities"; 
-		std::fwrite( pCell->phenotype.motility.chemotactic_sensitivities.data() , sizeof(double) , m , fp ); 
-
-// secretion 
- 		// name = "secretion_rates"; 
-		std::fwrite( pCell->phenotype.secretion.secretion_rates.data() , sizeof(double) , m , fp ); 
-	 	// name = "uptake_rates"; 
-		std::fwrite( pCell->phenotype.secretion.uptake_rates.data() , sizeof(double) , m , fp ); 
- 		// name = "saturation_densities"; 
-		std::fwrite( pCell->phenotype.secretion.saturation_densities.data() , sizeof(double) , m , fp ); 
- 		// name = "net_export_rates"; 
-		std::fwrite( pCell->phenotype.secretion.net_export_rates.data() , sizeof(double) , m , fp ); 
-
-// molecular 
- 		// name = "internalized_total_substrates"; 
-		std::fwrite( pCell->phenotype.molecular.internalized_total_substrates.data() , sizeof(double) , m , fp ); 
- 		// name = "fraction_released_at_death"; 
-		std::fwrite( pCell->phenotype.molecular.fraction_released_at_death.data() , sizeof(double) , m , fp ); 
- 		// name = "fraction_transferred_when_ingested"; 
-		std::fwrite( pCell->phenotype.molecular.fraction_transferred_when_ingested.data() , sizeof(double) , m , fp ); 
-
-// interactions 
-	/*
- 		// name = "dead_phagocytosis_rate"; 
-		std::fwrite( &( pCell->phenotype.cell_interactions.dead_phagocytosis_rate ) , sizeof(double) , 1 , fp ); 
-	*/
- 		// name = "apoptotic_phagocytosis_rate"; 
-		std::fwrite( &( pCell->phenotype.cell_interactions.apoptotic_phagocytosis_rate ) , sizeof(double) , 1 , fp ); 
- 		// name = "necrotic_phagocytosis_rate"; 
-		std::fwrite( &( pCell->phenotype.cell_interactions.necrotic_phagocytosis_rate ) , sizeof(double) , 1 , fp ); 
- 		// name = "other_dead_phagocytosis_rate"; 
-		std::fwrite( &( pCell->phenotype.cell_interactions.other_dead_phagocytosis_rate ) , sizeof(double) , 1 , fp ); 
- 		// name = "live_phagocytosis_rates"; 
-		std::fwrite( pCell->phenotype.cell_interactions.live_phagocytosis_rates.data() , sizeof(double) , n , fp ); 
-
- 		// name = "attack_rates"; 
-		std::fwrite( pCell->phenotype.cell_interactions.attack_rates.data() , sizeof(double) , n , fp ); 
- 		// name = "immunogenicities"; 
-		std::fwrite( pCell->phenotype.cell_interactions.immunogenicities.data() , sizeof(double) , n , fp ); 
- 		// name = "attack_target"; 
-		Cell* pTarget = pCell->phenotype.cell_interactions.pAttackTarget; 
-		int AttackID = -1; 
-		if( pTarget )
-		{ AttackID = pTarget->ID; }
-		dTemp = (double) AttackID; 
-		std::fwrite( &(dTemp) , sizeof(double) , 1 , fp ); 
- 		// name = "attack_damage_rate"; 
-		std::fwrite( &( pCell->phenotype.cell_interactions.attack_damage_rate ) , sizeof(double) , 1 , fp ); 
- 		// name = "attack_duration"; 
-		std::fwrite( &( pCell->phenotype.cell_interactions.attack_duration ) , sizeof(double) , 1 , fp ); 
- 		// name = "total_damage_delivered"; 
-		std::fwrite( &( pCell->phenotype.cell_interactions.total_damage_delivered ) , sizeof(double) , 1 , fp ); 
-
- 		// name = "fusion_rates"; 
-		std::fwrite( pCell->phenotype.cell_interactions.fusion_rates.data() , sizeof(double) , n , fp ); 
-
-// transformations 
-  		// name = "transformation_rates"; 
-		std::fwrite( pCell->phenotype.cell_transformations.transformation_rates.data() , sizeof(double) , n , fp ); 
-
-// asymmetric division
-		// name = "asymmetric_division_rate"; 
-		std::fwrite( pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.data() , sizeof(double) , n, fp );
-
-	// cell integrity 
- 		// name = "damage"; 
-		std::fwrite( &( pCell->phenotype.cell_integrity.damage ) , sizeof(double) , 1 , fp ); 
- 		// name = "damage_rate"; 
-		std::fwrite( &( pCell->phenotype.cell_integrity.damage_rate ) , sizeof(double) , 1 , fp ); 
- 		// name = "damage_repair_rate"; 
-		std::fwrite( &( pCell->phenotype.cell_integrity.damage_repair_rate ) , sizeof(double) , 1 , fp ); 
-
-// custom 
-		// custom scalar variables 
-		for( int j=0 ; j < (*all_cells)[0]->custom_data.variables.size(); j++ )
-		{ std::fwrite( &( pCell->custom_data.variables[j].value ) , sizeof(double) , 1 , fp ); }
-
-		// custom vector variables 
-		for( int j=0 ; j < (*all_cells)[0]->custom_data.vector_variables.size(); j++ )
+		// write data 
+		node = root.child( "filename" ); 
+		if( !node )
 		{
-			int size_temp = pCell->custom_data.vector_variables[j].value.size(); 
-			std::fwrite( pCell->custom_data.vector_variables[j].value.data() , sizeof(double) , size_temp , fp );
+			node = root.append_child( "filename" ); 
 		}
+
+		// write the filename 
+
+		// next, filename 
+		sprintf( filename , "%s_cells.mat" , filename_base.c_str() ); 
+		
+		/* store filename without the relative pathing (if any) */ 
+		filename_start = strrchr( filename , '/' ); 
+		if( filename_start == NULL )
+		{ filename_start = filename; }
+		else	
+		{ filename_start++; } 
+		strcpy( filename_without_pathing , filename_start );  
+		
+		if( !node.first_child() )
+		{
+			node.append_child( pugi::node_pcdata ).set_value( filename_without_pathing ); // filename ); 
+		}
+		else
+		{
+			node.first_child().set_value( filename_without_pathing ); // filename ); 
+		}
+
+		// now write the actual data 
+
+		int size_of_each_datum = cell_data_size;
+		int number_of_data_entries = (*all_cells).size();  
+
+		FILE* fp = write_matlab_header( size_of_each_datum, number_of_data_entries,  filename, "cells" );  
+		if( fp == NULL )
+		{ 
+			std::cout << std::endl << "Error: Failed to open " << filename << " for MAT writing." << std::endl << std::endl; 
+
+			std::cout << std::endl << "Error: We're not writing data like we expect. " << std::endl
+			<< "Check to make sure your save directory exists. " << std::endl << std::endl
+			<< "I'm going to exit with a crash code of -1 now until " << std::endl 
+			<< "you fix your directory. Sorry!" << std::endl << std::endl; 
+			exit(-1); 
+		} 
+
+		Cell* pCell; 
+		
+		double dTemp; 
+		// storing data as cols (each column is a cell)
+		for( int i=0; i < number_of_data_entries ; i++ )
+		{
+			pCell = (*all_cells)[i]; 
+
+			int writes = 0; 
+
+			// compatibilty : first 17 entries 
+			// ID 					<label index="0" size="1">ID</label>
+			// double ID_temp = (double) (*all_cells)[i]->ID;
+			// fwrite( (char*) &( ID_temp ) , sizeof(double) , 1 , fp ); 
+
+			// name = "ID"; 
+			dTemp = (double) pCell->ID;
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+			// name = "position";    NOTE very different syntax for writing vectors!
+			std::fwrite( pCell->position.data() , sizeof(double) , 3 , fp );
+			// name = "total_volume"; 
+			std::fwrite( &( pCell->phenotype.volume.total ) , sizeof(double) , 1 , fp ); 
+			// name = "cell_type"; 
+			dTemp = (double) pCell->type;
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+			// name = "cycle_model"; 
+			dTemp = (double) pCell->phenotype.cycle.model().code; 
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); // cycle model 
+			// name = "current_phase"; 
+			dTemp = (double) pCell->phenotype.cycle.current_phase().code; 
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); // cycle model 
+			// name = "elapsed_time_in_phase"; 
+			std::fwrite( &( pCell->phenotype.cycle.data.elapsed_time_in_phase ) , sizeof(double) , 1 , fp ); 
+			// name = "nuclear_volume"; 
+			std::fwrite( &( pCell->phenotype.volume.nuclear ) , sizeof(double) , 1 , fp );   
+			// name = "cytoplasmic_volume"; 
+			std::fwrite( &( pCell->phenotype.volume.cytoplasmic ) , sizeof(double) , 1 , fp );
+			// name = "fluid_fraction"; 
+			std::fwrite( &( pCell->phenotype.volume.fluid_fraction ) , sizeof(double) , 1 , fp );
+			// name = "calcified_fraction"; 
+			std::fwrite( &( pCell->phenotype.volume.calcified_fraction ) , sizeof(double) , 1 , fp ); 
+			// name = "orientation"; 
+			std::fwrite( pCell->state.orientation.data() , sizeof(double) , 3 , fp ); 
+			// name = "polarity"; 
+			std::fwrite( &( pCell->phenotype.geometry.polarity ) , sizeof(double) , 1 , fp ); 
+
+	/* state variables to save */ 
+	// state
+			// name = "velocity"; 
+			std::fwrite( pCell->velocity.data() , sizeof(double) , 3 , fp ); 
+			// name = "pressure"; 
+			std::fwrite( &( pCell->state.simple_pressure ) , sizeof(double) , 1 , fp ); 
+			// name = "number_of_nuclei"; 
+			dTemp = (double) pCell->state.number_of_nuclei; 
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+			// // name = "damage"; 
+			// std::fwrite( &( pCell->phenotype.integrity.damage ) , sizeof(double) , 1 , fp ); 
+			// name = "total_attack_time"; 
+			std::fwrite( &( pCell->state.total_attack_time ) , sizeof(double) , 1 , fp ); 
+			// name = "contact_with_basement_membrane"; 
+			dTemp = (double) pCell->state.contact_with_basement_membrane; 
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+
+	/* now go through phenotype and state */ 
+	// cycle 
+	// current exit rate // 1 
+			// name = "current_cycle_phase_exit_rate"; 
+			int phase_index = pCell->phenotype.cycle.data.current_phase_index; 
+			std::fwrite( &( pCell->phenotype.cycle.data.exit_rate(phase_index) ) , sizeof(double) , 1 , fp ); 
+			// name = "elapsed_time_in_phase"; 
+			std::fwrite( &( pCell->phenotype.cycle.data.elapsed_time_in_phase ) , sizeof(double) , 1 , fp ); 
+
+	// death 
+	// live or dead state // 1 
+			// name = "dead"; 
+			dTemp = (double) pCell->phenotype.death.dead; 
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+			// name = "current_death_model"; // 
+			dTemp = (double) pCell->phenotype.death.current_death_model_index; 
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+			// name = "death_rates"; 
+			std::fwrite( pCell->phenotype.death.rates.data() , sizeof(double) , nd , fp ); 
+			
+		// volume ()
+			// name = "cytoplasmic_biomass_change_rate"; 
+			std::fwrite( &( pCell->phenotype.volume.cytoplasmic_biomass_change_rate ) , sizeof(double) , 1 , fp ); 
+			// name = "nuclear_biomass_change_rate"; 
+			std::fwrite( &( pCell->phenotype.volume.nuclear_biomass_change_rate ) , sizeof(double) , 1 , fp ); 
+			// name = "fluid_change_rate"; 
+			std::fwrite( &( pCell->phenotype.volume.fluid_change_rate ) , sizeof(double) , 1 , fp ); 
+			// name = "calcification_rate"; 
+			std::fwrite( &( pCell->phenotype.volume.calcification_rate ) , sizeof(double) , 1 , fp ); 
+			// name = "target_solid_cytoplasmic"; 
+			std::fwrite( &( pCell->phenotype.volume.target_solid_cytoplasmic ) , sizeof(double) , 1 , fp ); 
+			// name = "target_solid_nuclear"; 
+			std::fwrite( &( pCell->phenotype.volume.target_solid_nuclear ) , sizeof(double) , 1 , fp ); 
+			// name = "target_fluid_fraction"; 
+			std::fwrite( &( pCell->phenotype.volume.target_fluid_fraction ) , sizeof(double) , 1 , fp ); 
+
+	// geometry 
+		// radius //1 
+			// name = "radius"; 
+			std::fwrite( &( pCell->phenotype.geometry.radius ) , sizeof(double) , 1 , fp ); 
+			// name = "nuclear_radius"; 
+			std::fwrite( &( pCell->phenotype.geometry.nuclear_radius ) , sizeof(double) , 1 , fp ); 
+			// name = "surface_area"; 
+			std::fwrite( &( pCell->phenotype.geometry.surface_area ) , sizeof(double) , 1 , fp ); 
+
+	// mechanics 
+		// cell_cell_adhesion_strength; // 1
+			// name = "cell_cell_adhesion_strength"; 
+			std::fwrite( &( pCell->phenotype.mechanics.cell_cell_adhesion_strength ) , sizeof(double) , 1 , fp ); 
+			// name = "cell_BM_adhesion_strength"; 
+			std::fwrite( &( pCell->phenotype.mechanics.cell_BM_adhesion_strength ) , sizeof(double) , 1 , fp ); 
+			// name = "cell_cell_repulsion_strength"; 
+			std::fwrite( &( pCell->phenotype.mechanics.cell_cell_repulsion_strength ) , sizeof(double) , 1 , fp ); 
+			// name = "cell_BM_repulsion_strength"; 
+			std::fwrite( &( pCell->phenotype.mechanics.cell_BM_repulsion_strength ) , sizeof(double) , 1 , fp ); 
+			// name = "cell_adhesion_affinities"; 
+			std::fwrite( pCell->phenotype.mechanics.cell_adhesion_affinities.data() , sizeof(double) , n , fp ); 
+			// name = "relative_maximum_adhesion_distance"; 
+			std::fwrite( &( pCell->phenotype.mechanics.relative_maximum_adhesion_distance ) , sizeof(double) , 1 , fp ); 
+			// name = "maximum_number_of_attachments"; 
+			dTemp = (double) pCell->phenotype.mechanics.maximum_number_of_attachments; 
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+			// name = "attachment_elastic_constant"; 
+			std::fwrite( &( pCell->phenotype.mechanics.attachment_elastic_constant ) , sizeof(double) , 1 , fp ); 
+			// name = "attachment_rate"; 
+			std::fwrite( &( pCell->phenotype.mechanics.attachment_rate ) , sizeof(double) , 1 , fp ); 
+			// name = "detachment_rate"; 
+			std::fwrite( &( pCell->phenotype.mechanics.detachment_rate ) , sizeof(double) , 1 , fp ); 
+
+	// Motility
+			// name = "is_motile"; 
+			dTemp = (double) pCell->phenotype.motility.is_motile; 
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+			// name = "persistence_time"; 
+			std::fwrite( &( pCell->phenotype.motility.persistence_time ) , sizeof(double) , 1 , fp ); 
+			// name = "migration_speed"; 
+			std::fwrite( &( pCell->phenotype.motility.migration_speed ) , sizeof(double) , 1 , fp ); 
+			// name = "migration_bias_direction"; 
+			std::fwrite( pCell->phenotype.motility.migration_bias_direction.data() , sizeof(double) , 3 , fp ); 
+			// name = "migration_bias"; 
+			std::fwrite( &( pCell->phenotype.motility.migration_bias ) , sizeof(double) , 1 , fp ); 
+			// name = "motility_vector"; 
+			std::fwrite( pCell->phenotype.motility.motility_vector.data() , sizeof(double) , 3 , fp ); 
+			// name = "chemotaxis_index"; 
+			dTemp = (double) pCell->phenotype.motility.chemotaxis_index; 
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+			// name = "chemotaxis_direction"; 
+			dTemp = (double) pCell->phenotype.motility.chemotaxis_direction; 
+			std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+			// name = "chemotactic_sensitivities"; 
+			std::fwrite( pCell->phenotype.motility.chemotactic_sensitivities.data() , sizeof(double) , m , fp ); 
+
+	// secretion 
+			// name = "secretion_rates"; 
+			std::fwrite( pCell->phenotype.secretion.secretion_rates.data() , sizeof(double) , m , fp ); 
+			// name = "uptake_rates"; 
+			std::fwrite( pCell->phenotype.secretion.uptake_rates.data() , sizeof(double) , m , fp ); 
+			// name = "saturation_densities"; 
+			std::fwrite( pCell->phenotype.secretion.saturation_densities.data() , sizeof(double) , m , fp ); 
+			// name = "net_export_rates"; 
+			std::fwrite( pCell->phenotype.secretion.net_export_rates.data() , sizeof(double) , m , fp ); 
+
+	// molecular 
+			// name = "internalized_total_substrates"; 
+			std::fwrite( pCell->phenotype.molecular.internalized_total_substrates.data() , sizeof(double) , m , fp ); 
+			// name = "fraction_released_at_death"; 
+			std::fwrite( pCell->phenotype.molecular.fraction_released_at_death.data() , sizeof(double) , m , fp ); 
+			// name = "fraction_transferred_when_ingested"; 
+			std::fwrite( pCell->phenotype.molecular.fraction_transferred_when_ingested.data() , sizeof(double) , m , fp ); 
+
+	// interactions 
+		/*
+			// name = "dead_phagocytosis_rate"; 
+			std::fwrite( &( pCell->phenotype.cell_interactions.dead_phagocytosis_rate ) , sizeof(double) , 1 , fp ); 
+		*/
+			// name = "apoptotic_phagocytosis_rate"; 
+			std::fwrite( &( pCell->phenotype.cell_interactions.apoptotic_phagocytosis_rate ) , sizeof(double) , 1 , fp ); 
+			// name = "necrotic_phagocytosis_rate"; 
+			std::fwrite( &( pCell->phenotype.cell_interactions.necrotic_phagocytosis_rate ) , sizeof(double) , 1 , fp ); 
+			// name = "other_dead_phagocytosis_rate"; 
+			std::fwrite( &( pCell->phenotype.cell_interactions.other_dead_phagocytosis_rate ) , sizeof(double) , 1 , fp ); 
+			// name = "live_phagocytosis_rates"; 
+			std::fwrite( pCell->phenotype.cell_interactions.live_phagocytosis_rates.data() , sizeof(double) , n , fp ); 
+
+			// name = "attack_rates"; 
+			std::fwrite( pCell->phenotype.cell_interactions.attack_rates.data() , sizeof(double) , n , fp ); 
+			// name = "immunogenicities"; 
+			std::fwrite( pCell->phenotype.cell_interactions.immunogenicities.data() , sizeof(double) , n , fp ); 
+			// name = "attack_target"; 
+			Cell* pTarget = pCell->phenotype.cell_interactions.pAttackTarget; 
+			int AttackID = -1; 
+			if( pTarget )
+			{ AttackID = pTarget->ID; }
+			dTemp = (double) AttackID; 
+			std::fwrite( &(dTemp) , sizeof(double) , 1 , fp ); 
+			// name = "attack_damage_rate"; 
+			std::fwrite( &( pCell->phenotype.cell_interactions.attack_damage_rate ) , sizeof(double) , 1 , fp ); 
+			// name = "attack_duration"; 
+			std::fwrite( &( pCell->phenotype.cell_interactions.attack_duration ) , sizeof(double) , 1 , fp ); 
+			// name = "total_damage_delivered"; 
+			std::fwrite( &( pCell->phenotype.cell_interactions.total_damage_delivered ) , sizeof(double) , 1 , fp ); 
+
+			// name = "fusion_rates"; 
+			std::fwrite( pCell->phenotype.cell_interactions.fusion_rates.data() , sizeof(double) , n , fp ); 
+
+	// transformations 
+			// name = "transformation_rates"; 
+			std::fwrite( pCell->phenotype.cell_transformations.transformation_rates.data() , sizeof(double) , n , fp ); 
+
+	// asymmetric division
+			// name = "asymmetric_division_rate"; 
+			std::fwrite( pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.data() , sizeof(double) , n, fp );
+
+		// cell integrity 
+			// name = "damage"; 
+			std::fwrite( &( pCell->phenotype.cell_integrity.damage ) , sizeof(double) , 1 , fp ); 
+			// name = "damage_rate"; 
+			std::fwrite( &( pCell->phenotype.cell_integrity.damage_rate ) , sizeof(double) , 1 , fp ); 
+			// name = "damage_repair_rate"; 
+			std::fwrite( &( pCell->phenotype.cell_integrity.damage_repair_rate ) , sizeof(double) , 1 , fp ); 
+
+	// custom 
+			// custom scalar variables 
+			for( int j=0 ; j < (*all_cells)[0]->custom_data.variables.size(); j++ )
+			{ std::fwrite( &( pCell->custom_data.variables[j].value ) , sizeof(double) , 1 , fp ); }
+
+			// custom vector variables 
+			for( int j=0 ; j < (*all_cells)[0]->custom_data.vector_variables.size(); j++ )
+			{
+				int size_temp = pCell->custom_data.vector_variables[j].value.size(); 
+				std::fwrite( pCell->custom_data.vector_variables[j].value.data() , sizeof(double) , size_temp , fp );
+			}
+		}
+
+		fclose( fp ); 
 	}
 
-	fclose( fp ); 
-
+	if( PhysiCell_settings.save_intracellular_data )
+	{
 #ifdef ADDON_PHYSIBOSS
 
 	// PhysiBoSS Intracellular Data
-	node = node.parent().parent();  // custom 
+	node = custom_node; 
 
 	root = node; 
 	node = node.child( "boolean_intracellular_data" );  
@@ -1028,6 +1039,7 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 		attrib = node.append_attribute( "data_version" ); 
 		attrib.set_value( "2" ); 	
 	}
+	
 	root = node; // root = cellular_information.cell_populations.cell_population.custom.intracellular_data
 	node = root.child( "filename"); 
 	if( !node )
@@ -1061,154 +1073,160 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 	MaBoSSIntracellular::save( filename );
 
 #endif
-
-	// neighbor graph 
-	node = node.parent().parent();  // custom 
-
-	root = node; 
-	node = node.child( "neighbor_graph" );  
-	if( !node )
-	{
-		node = root.append_child( "neighbor_graph" ); 
-
-		pugi::xml_attribute attrib = node.append_attribute( "type" ); 
-		attrib.set_value( "text" ); 		
-
-		attrib = node.append_attribute( "source" ); 
-		attrib.set_value( "PhysiCell" ); 		
-
-		attrib = node.append_attribute( "data_version" ); 
-		attrib.set_value( "2" ); 	
 	}
-	root = node; // root = cellular_information.cell_populations.cell_population.custom.neighbor_graph
-	node = root.child( "filename"); 
-	if( !node )
-	{
-		node = root.append_child( "filename" ); 
-
-	}
-	root = node; // root = cellular_information.cell_populations.cell_population.custom.neighbor_graph.filename 
-
-
-	// next, filename 
-	sprintf( filename , "%s_cell_neighbor_graph.txt" , filename_base.c_str() ); 
-		
-	/* store filename without the relative pathing (if any) */ 
-	filename_start = strrchr( filename , '/' ); 
-	if( filename_start == NULL )
-	{ filename_start = filename; }
-	else	
-	{ filename_start++; } 
-	strcpy( filename_without_pathing , filename_start );  
 	
-	if( !node.first_child() )
+	if( PhysiCell_settings.save_neighbor_data )
 	{
-		node.append_child( pugi::node_pcdata ).set_value( filename_without_pathing ); // filename ); 
-	}
-	else
-	{
-		node.first_child().set_value( filename_without_pathing ); // filename ); 
-	}	
+		// neighbor graph 
+		node = custom_node; 
 
-	write_neighbor_graph( filename ); 
+		root = node; 
+		node = node.child( "neighbor_graph" );  
+		if( !node )
+		{
+			node = root.append_child( "neighbor_graph" ); 
 
+			pugi::xml_attribute attrib = node.append_attribute( "type" ); 
+			attrib.set_value( "text" ); 		
 
-	// attached cell graph 
-	node = root; 
-	node = node.parent().parent(); // root = cellular_information.cell_populations.cell_population.custom
+			attrib = node.append_attribute( "source" ); 
+			attrib.set_value( "PhysiCell" ); 		
 
-	root = node; 
-	node = node.child( "attached_cells_graph" );  
-	if( !node )
-	{
-		node = root.append_child( "attached_cells_graph" ); 
+			attrib = node.append_attribute( "data_version" ); 
+			attrib.set_value( "2" ); 	
+		}
+		root = node; // root = cellular_information.cell_populations.cell_population.custom.neighbor_graph
+		node = root.child( "filename"); 
+		if( !node )
+		{
+			node = root.append_child( "filename" ); 
 
-		pugi::xml_attribute attrib = node.append_attribute( "type" ); 
-		attrib.set_value( "text" ); 		
-
-		attrib = node.append_attribute( "source" ); 
-		attrib.set_value( "PhysiCell" ); 		
-
-		attrib = node.append_attribute( "data_version" ); 
-		attrib.set_value( "2" ); 	
-	}
-	root = node; // root = cellular_information.cell_populations.cell_population.custom.attached_cells_graph
-	node = root.child( "filename"); 
-	if( !node )
-	{ node = root.append_child( "filename" ); }
-	root = node; // root = cellular_information.cell_populations.cell_population.custom.attached_cells_graph.filename 
+		}
+		root = node; // root = cellular_information.cell_populations.cell_population.custom.neighbor_graph.filename 
 
 
-	// next, filename 
-	sprintf( filename , "%s_attached_cells_graph.txt" , filename_base.c_str() ); 
+		// next, filename 
+		sprintf( filename , "%s_cell_neighbor_graph.txt" , filename_base.c_str() ); 
+			
+		/* store filename without the relative pathing (if any) */ 
+		filename_start = strrchr( filename , '/' ); 
+		if( filename_start == NULL )
+		{ filename_start = filename; }
+		else	
+		{ filename_start++; } 
+		strcpy( filename_without_pathing , filename_start );  
 		
-	/* store filename without the relative pathing (if any) */ 
-	filename_start = strrchr( filename , '/' ); 
-	if( filename_start == NULL )
-	{ filename_start = filename; }
-	else	
-	{ filename_start++; } 
-	strcpy( filename_without_pathing , filename_start );  
-	
-	if( !node.first_child() )
-	{
-		node.append_child( pugi::node_pcdata ).set_value( filename_without_pathing ); // filename ); 
+		if( !node.first_child() )
+		{
+			node.append_child( pugi::node_pcdata ).set_value( filename_without_pathing ); // filename ); 
+		}
+		else
+		{
+			node.first_child().set_value( filename_without_pathing ); // filename ); 
+		}	
+
+		write_neighbor_graph( filename );
 	}
-	else
+
+	if( PhysiCell_settings.save_attachments )
 	{
-		node.first_child().set_value( filename_without_pathing ); // filename ); 
-	}	
+		// attached cell graph 
+		node = custom_node; // cellular_information.cell_populations.cell_population.custom
 
-	write_attached_cells_graph( filename );	
+		root = node; 
+		node = node.child( "attached_cells_graph" );  
+		if( !node )
+		{
+			node = root.append_child( "attached_cells_graph" ); 
 
-	// spring attached cell graph 
-	node = root; 
-	node = node.parent().parent(); // root = cellular_information.cell_populations.cell_population.custom
+			pugi::xml_attribute attrib = node.append_attribute( "type" ); 
+			attrib.set_value( "text" ); 		
 
-	root = node; 
-	node = node.child( "spring_attached_cells_graph" );  
-	if( !node )
-	{
-		node = root.append_child( "spring_attached_cells_graph" ); 
+			attrib = node.append_attribute( "source" ); 
+			attrib.set_value( "PhysiCell" ); 		
 
-		pugi::xml_attribute attrib = node.append_attribute( "type" ); 
-		attrib.set_value( "text" ); 		
-
-		attrib = node.append_attribute( "source" ); 
-		attrib.set_value( "PhysiCell" ); 		
-
-		attrib = node.append_attribute( "data_version" ); 
-		attrib.set_value( "2" ); 	
-	}
-	root = node; // root = cellular_information.cell_populations.cell_population.custom.spring_attached_cells_graph
-	node = root.child( "filename"); 
-	if( !node )
-	{ node = root.append_child( "filename" ); }
-	root = node; // root = cellular_information.cell_populations.cell_population.custom.spring_attached_cells_graph.filename 
+			attrib = node.append_attribute( "data_version" ); 
+			attrib.set_value( "2" ); 	
+		}
+		root = node; // root = cellular_information.cell_populations.cell_population.custom.attached_cells_graph
+		node = root.child( "filename"); 
+		if( !node )
+		{ node = root.append_child( "filename" ); }
+		root = node; // root = cellular_information.cell_populations.cell_population.custom.attached_cells_graph.filename 
 
 
-	// next, filename 
-	sprintf( filename , "%s_spring_attached_cells_graph.txt" , filename_base.c_str() ); 
+		// next, filename 
+		sprintf( filename , "%s_attached_cells_graph.txt" , filename_base.c_str() ); 
+			
+		/* store filename without the relative pathing (if any) */ 
+		filename_start = strrchr( filename , '/' ); 
+		if( filename_start == NULL )
+		{ filename_start = filename; }
+		else	
+		{ filename_start++; } 
+		strcpy( filename_without_pathing , filename_start );  
 		
-	/* store filename without the relative pathing (if any) */ 
-	filename_start = strrchr( filename , '/' ); 
-	if( filename_start == NULL )
-	{ filename_start = filename; }
-	else	
-	{ filename_start++; } 
-	strcpy( filename_without_pathing , filename_start );  
-	
-	if( !node.first_child() )
-	{
-		node.append_child( pugi::node_pcdata ).set_value( filename_without_pathing ); // filename ); 
+		if( !node.first_child() )
+		{
+			node.append_child( pugi::node_pcdata ).set_value( filename_without_pathing ); // filename ); 
+		}
+		else
+		{
+			node.first_child().set_value( filename_without_pathing ); // filename ); 
+		}	
+
+		write_attached_cells_graph( filename );
 	}
-	else
+	
+	if( PhysiCell_settings.save_string_attachments )
 	{
-		node.first_child().set_value( filename_without_pathing ); // filename ); 
-	}	
+		// spring attached cell graph 
+		node = custom_node; // cellular_information.cell_populations.cell_population.custom
 
-	write_spring_attached_cells_graph( filename ); 
+		root = node; 
+		node = node.child( "spring_attached_cells_graph" );  
+		if( !node )
+		{
+			node = root.append_child( "spring_attached_cells_graph" ); 
 
+			pugi::xml_attribute attrib = node.append_attribute( "type" ); 
+			attrib.set_value( "text" ); 		
+
+			attrib = node.append_attribute( "source" ); 
+			attrib.set_value( "PhysiCell" ); 		
+
+			attrib = node.append_attribute( "data_version" ); 
+			attrib.set_value( "2" ); 	
+		}
+		root = node; // root = cellular_information.cell_populations.cell_population.custom.spring_attached_cells_graph
+		node = root.child( "filename"); 
+		if( !node )
+		{ node = root.append_child( "filename" ); }
+		root = node; // root = cellular_information.cell_populations.cell_population.custom.spring_attached_cells_graph.filename 
+
+
+		// next, filename 
+		sprintf( filename , "%s_spring_attached_cells_graph.txt" , filename_base.c_str() ); 
+			
+		/* store filename without the relative pathing (if any) */ 
+		filename_start = strrchr( filename , '/' ); 
+		if( filename_start == NULL )
+		{ filename_start = filename; }
+		else	
+		{ filename_start++; } 
+		strcpy( filename_without_pathing , filename_start );  
+		
+		if( !node.first_child() )
+		{
+			node.append_child( pugi::node_pcdata ).set_value( filename_without_pathing ); // filename ); 
+		}
+		else
+		{
+			node.first_child().set_value( filename_without_pathing ); // filename ); 
+		}	
+
+		write_spring_attached_cells_graph( filename );
+	}
 	return; 
 }
 

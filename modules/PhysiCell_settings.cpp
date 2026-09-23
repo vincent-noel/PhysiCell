@@ -141,6 +141,12 @@ PhysiCell_Settings::PhysiCell_Settings()
 
 	full_save_interval = 60;  
 	enable_full_saves = true; 
+	save_microenvironment = true;
+	save_cell_data = true;
+	save_neighbor_data = true;
+	save_attachments = true;
+	save_string_attachments = true;
+	save_intracellular_data = true;
 	enable_legacy_saves = false; 
 	
 	SVG_save_interval = 60; 
@@ -209,6 +215,16 @@ void PhysiCell_Settings::read_from_pugixml( void )
 	node = xml_find_node( node , "full_data" ); 
 	full_save_interval = xml_get_double_value( node , "interval" );
 	enable_full_saves = xml_get_bool_value( node , "enable" ); 
+	
+	// optional attributes on <enable> select which parts of the full data are saved 
+	pugi::xml_node enable_node = xml_find_node( node , "enable" ); 
+	save_microenvironment = enable_node.attribute("microenvironment").as_bool(true);
+	save_cell_data = enable_node.attribute("cell_data").as_bool(true);
+	save_neighbor_data = enable_node.attribute("neighbor_data").as_bool(true);
+	save_attachments = enable_node.attribute("attachments").as_bool(true);
+	save_string_attachments = enable_node.attribute("string_attachments").as_bool(true);
+	save_intracellular_data = enable_node.attribute("intracellular_data").as_bool(true);
+
 	node = node.parent(); 
 	
 	node = xml_find_node( node , "SVG" ); 

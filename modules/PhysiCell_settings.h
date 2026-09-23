@@ -111,6 +111,12 @@ class PhysiCell_Settings
 
 	double full_save_interval = 60;  
 	bool enable_full_saves = true; 
+	bool save_microenvironment = true;
+	bool save_cell_data = true;
+	bool save_neighbor_data = true;
+	bool save_attachments = true;
+	bool save_string_attachments = true;
+	bool save_intracellular_data = true;
 	bool enable_legacy_saves = false; 
 
 	bool disable_automated_spring_adhesions = false; 
